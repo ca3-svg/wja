@@ -2175,17 +2175,35 @@ function renderStats() {
 
 function timeInputToMins(val) {
   if (!val) return NaN;
-  const [h, m] = val.split(':').map(Number);
+  const raw = String(val).trim();
+  if (/^\d{3,4}$/.test(raw)) {
+    const pad = raw.padStart(4, '0');
+    const h = parseInt(pad.slice(0, 2), 10);
+    const m = parseInt(pad.slice(2), 10);
+    if (h === 24 && m === 0) return 24 * 60;
+    if (h <= 24 && m < 60) return h * 60 + m;
+  }
+  const [h, m] = raw.split(':').map(Number);
   return h * 60 + m;
 }
 
 function normalizeTimeValue(val, fallback = '') {
   const raw = String(val ?? '').trim();
   if (!raw) return fallback;
+  const military = raw.match(/^(\d{3,4})$/);
+  if (military) {
+    const pad = military[1].padStart(4, '0');
+    const h = parseInt(pad.slice(0, 2), 10);
+    const m = parseInt(pad.slice(2), 10);
+    if (h === 24 && m === 0) return '24:00';
+    if (h <= 24 && m < 60) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return fallback || raw;
+  }
   const match = raw.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return fallback || raw;
-  const h = Math.max(0, Math.min(23, parseInt(match[1], 10)));
+  const h = Math.max(0, Math.min(24, parseInt(match[1], 10)));
   const m = Math.max(0, Math.min(59, parseInt(match[2], 10)));
+  if (h === 24 && m === 0) return '24:00';
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
@@ -2922,10 +2940,10 @@ function toggleViewerShortcut(kind) {
     }
   } else if (kind === 'late') {
     const current = normalizeTimeValue(document.getElementById('filter-rpt-after')?.value || '', '');
-    setValue('filter-rpt-after', current === viewerQuickSettings.lateStartAfter ? '' : viewerQuickSettings.lateStartAfter);
+    setValue('filter-rpt-after', current === normalizeTimeValue(viewerQuickSettings.lateStartAfter, '10:00') ? '' : normalizeTimeValue(viewerQuickSettings.lateStartAfter, '10:00'));
   } else if (kind === 'early') {
     const current = normalizeTimeValue(document.getElementById('filter-rls-before')?.value || '', '');
-    setValue('filter-rls-before', current === viewerQuickSettings.earlyFinishBefore ? '' : viewerQuickSettings.earlyFinishBefore);
+    setValue('filter-rls-before', current === normalizeTimeValue(viewerQuickSettings.earlyFinishBefore, '18:00') ? '' : normalizeTimeValue(viewerQuickSettings.earlyFinishBefore, '18:00'));
   } else if (kind === 'fewlegs') {
     setValue('filter-max-legs', document.getElementById('filter-max-legs')?.value === viewerQuickSettings.fewLegsMax ? '' : viewerQuickSettings.fewLegsMax);
   } else if (kind === 'avg') {
@@ -3215,8 +3233,12 @@ function applyFilters() {
   const search = document.getElementById('search-input').value.trim().toLowerCase();
   const base = document.getElementById('filter-base').value;
   const days = document.getElementById('filter-days').value;
-  const rptAfter = document.getElementById('filter-rpt-after').value;
-  const rlsBefore = document.getElementById('filter-rls-before').value;
+  const rptAfterInput = document.getElementById('filter-rpt-after');
+  const rlsBeforeInput = document.getElementById('filter-rls-before');
+  const rptAfter = normalizeTimeValue(rptAfterInput?.value || '');
+  const rlsBefore = normalizeTimeValue(rlsBeforeInput?.value || '');
+  if (rptAfterInput && rptAfter) rptAfterInput.value = rptAfter;
+  if (rlsBeforeInput && rlsBefore) rlsBeforeInput.value = rlsBefore;
   const minLay = parseFloat(document.getElementById('filter-min-lay').value);
   const maxLay = parseFloat(document.getElementById('filter-max-lay').value);
   const maxLegs = parseFloat(document.getElementById('filter-max-legs').value);
@@ -3264,7 +3286,7 @@ function applyFilters() {
   const rlsAfterMins = timeInputToMins(viewerQuickSettings.earlyFinishAfter || '07:00');
   if (!isNaN(rlsMins)) {
     pairingTable.addFilter((data, p) => {
-      if (data.release_mins === 0) return true;
+      if (isNaN(data.release_mins) || data.release_mins <= 0) return false;
       if (!isNaN(p.min) && data.release_mins < p.min) return false;
       return data.release_mins <= p.max;
     }, {min: isNaN(rlsAfterMins) ? 7 * 60 : rlsAfterMins, max: rlsMins});
@@ -3578,6 +3600,7 @@ function getEligiblePairings() {
     if (!isNaN(earlyFinishAfter) && !isNaN(earlyFinishBefore)) {
       const releaseMins = p.release_minutes || timeStrToMinutes(p.release_time || '');
       if (!isNaN(releaseMins) && releaseMins > 0 && (releaseMins < earlyFinishAfter || releaseMins > earlyFinishBefore)) return false;
+      if (!isNaN(releaseMins) && releaseMins <= 0) return false;
     }
     if ((destinationScope !== 'all' || destinationCode) && !pairingMatchesDestinationFilter(p, destinationScope, destinationCode)) return false;
     return true;
