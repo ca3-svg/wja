@@ -474,6 +474,10 @@
             Value
             <input id="preference-modal-value" type="text" class="input-base mt-1 w-full py-2 px-3 text-sm">
           </label>
+          <label id="preference-modal-secondary-wrap" class="hidden text-xs text-slate-500 dark:text-slate-400 block">
+            Lower bound
+            <input id="preference-modal-secondary" type="text" class="input-base mt-1 w-full py-2 px-3 text-sm">
+          </label>
           <div class="flex justify-end gap-2">
             <button class="btn-base btn-secondary !py-2 !px-3 !text-xs" onclick="closePreferenceModal()">Cancel</button>
             <button class="btn-base btn-primary !py-2 !px-3 !text-xs" onclick="savePreferenceModal()">Save</button>
@@ -1320,6 +1324,7 @@ let savedViewerViews = {};
 let viewerQuickSettings = {
   lateStartAfter: '10:00',
   earlyFinishBefore: '18:00',
+  earlyFinishAfter: '07:00',
   longLayoverMin: '10',
   fewLegsMax: '2',
   avgLayoverMin: ''
@@ -1388,6 +1393,7 @@ function loadData() {
       viewerQuickSettings = {
         lateStartAfter: data.viewerQuickSettings?.lateStartAfter || '10:00',
         earlyFinishBefore: data.viewerQuickSettings?.earlyFinishBefore || '18:00',
+        earlyFinishAfter: data.viewerQuickSettings?.earlyFinishAfter || '07:00',
         longLayoverMin: data.viewerQuickSettings?.longLayoverMin || '10',
         fewLegsMax: data.viewerQuickSettings?.fewLegsMax || '2',
         avgLayoverMin: data.viewerQuickSettings?.avgLayoverMin || ''
@@ -1841,6 +1847,14 @@ function parseTripBlock(block) {
   for (const lay of trip.layovers) {
     const mins = timeStrToMinutes(lay.duration);
     if (!isNaN(mins) && mins/60 > trip.longest_layover) trip.longest_layover = Math.round(mins/60*100)/100;
+  }
+
+  trip.shortest_layover = 0;
+  const shortestLayoverMinutes = trip.layovers
+    .map(l => timeStrToMinutes(l.duration))
+    .filter(m => !isNaN(m) && m > 0);
+  if (shortestLayoverMinutes.length) {
+    trip.shortest_layover = Math.round((Math.min(...shortestLayoverMinutes) / 60) * 100) / 100;
   }
 
   trip.average_layover = 0;
@@ -2389,8 +2403,8 @@ function renderViewerPreferences() {
     { key: 'usa', label: 'USA layovers', desc: 'Prefer pairings with U.S. layovers', value: 'scope' },
     { key: 'intl', label: 'International layovers', desc: 'Prefer pairings outside Canada and the USA', value: 'scope' },
     { key: 'late', label: 'Late start', desc: 'Report time must be at or after this time', value: viewerQuickSettings.lateStartAfter || '10:00' },
-    { key: 'early', label: 'Early finish', desc: 'Release time must be at or before this time', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
-    { key: 'long', label: 'Long layover', desc: 'Minimum layover length to keep a pairing in view', value: `${viewerQuickSettings.longLayoverMin || '10'}h` },
+    { key: 'early', label: 'Early finish', desc: 'Release time must be between 07:00 and this time', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
+    { key: 'long', label: 'Minimum layover', desc: 'Shortest layover must be at least this long', value: `${viewerQuickSettings.longLayoverMin || '10'}h` },
     { key: 'avg', label: 'Average layover', desc: 'Average layover across the pairing must be at least this much', value: viewerQuickSettings.avgLayoverMin ? `${viewerQuickSettings.avgLayoverMin}h` : 'unset' },
     { key: 'fewlegs', label: 'Few legs', desc: 'Maximum legs per day for a pairing', value: viewerQuickSettings.fewLegsMax || '2' },
     { key: 'commutable', label: 'Commutable', desc: 'Quick toggle for commutable pairings', value: '' },
@@ -2421,12 +2435,14 @@ function syncPreferenceModal(kind) {
   const title = document.getElementById('preference-modal-title');
   const desc = document.getElementById('preference-modal-desc');
   const value = document.getElementById('preference-modal-value');
+  const secondaryWrap = document.getElementById('preference-modal-secondary-wrap');
+  const secondary = document.getElementById('preference-modal-secondary');
   if (!modal || !title || !desc || !value) return;
 
   const defs = {
     late: { title: 'Late start after', desc: 'Pairings must start at or after this report time.', value: viewerQuickSettings.lateStartAfter || '10:00' },
-    early: { title: 'Early finish before', desc: 'Pairings must finish at or before this release time.', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
-    long: { title: 'Long layover minimum', desc: 'Keep pairings with at least this layover length in hours.', value: viewerQuickSettings.longLayoverMin || '10' },
+    early: { title: 'Early finish window', desc: 'Pairings must finish between the lower bound and this release time.', value: viewerQuickSettings.earlyFinishBefore || '18:00', secondary: viewerQuickSettings.earlyFinishAfter || '07:00' },
+    long: { title: 'Minimum layover length', desc: 'Keep pairings whose shortest layover is at least this many hours.', value: viewerQuickSettings.longLayoverMin || '10' },
     avg: { title: 'Average layover minimum', desc: 'Keep pairings whose average layover is at least this many hours.', value: viewerQuickSettings.avgLayoverMin || '' },
     fewlegs: { title: 'Few legs maximum', desc: 'Keep pairings that do not exceed this many legs per day.', value: viewerQuickSettings.fewLegsMax || '2' },
     home: { title: 'YOW home preference', desc: 'This pins YOW layovers as your home preference.', value: 'YOW' }
@@ -2438,6 +2454,16 @@ function syncPreferenceModal(kind) {
   value.type = kind === 'late' || kind === 'early' ? 'time' : (kind === 'long' || kind === 'avg' || kind === 'fewlegs' ? 'number' : 'text');
   value.step = (kind === 'long' || kind === 'avg' || kind === 'fewlegs') ? '0.5' : '1';
   value.min = (kind === 'long' || kind === 'avg' || kind === 'fewlegs') ? '0' : '';
+  if (secondaryWrap && secondary) {
+    if (kind === 'early') {
+      secondaryWrap.classList.remove('hidden');
+      secondary.type = 'time';
+      secondary.value = cfg.secondary || '07:00';
+    } else {
+      secondaryWrap.classList.add('hidden');
+      secondary.value = '';
+    }
+  }
   modal.classList.remove('hidden');
   lucide.createIcons();
 }
@@ -2455,9 +2481,13 @@ function closePreferenceModal() {
 
 function savePreferenceModal() {
   const value = (document.getElementById('preference-modal-value')?.value || '').trim();
+  const secondary = (document.getElementById('preference-modal-secondary')?.value || '').trim();
   if (!activePreferenceEdit) return closePreferenceModal();
   if (activePreferenceEdit === 'late') viewerQuickSettings.lateStartAfter = value || '10:00';
-  else if (activePreferenceEdit === 'early') viewerQuickSettings.earlyFinishBefore = value || '18:00';
+  else if (activePreferenceEdit === 'early') {
+    viewerQuickSettings.earlyFinishAfter = secondary || '07:00';
+    viewerQuickSettings.earlyFinishBefore = value || '18:00';
+  }
   else if (activePreferenceEdit === 'long') viewerQuickSettings.longLayoverMin = value || '10';
   else if (activePreferenceEdit === 'avg') viewerQuickSettings.avgLayoverMin = value || '';
   else if (activePreferenceEdit === 'fewlegs') viewerQuickSettings.fewLegsMax = value || '2';
@@ -2519,6 +2549,7 @@ function applyViewerFilterSnapshot(snapshot = {}) {
   viewerQuickSettings = {
     lateStartAfter: snapshot.viewerQuickSettings?.lateStartAfter || '10:00',
     earlyFinishBefore: snapshot.viewerQuickSettings?.earlyFinishBefore || '18:00',
+    earlyFinishAfter: snapshot.viewerQuickSettings?.earlyFinishAfter || '07:00',
     longLayoverMin: snapshot.viewerQuickSettings?.longLayoverMin || '10',
     fewLegsMax: snapshot.viewerQuickSettings?.fewLegsMax || '2',
     avgLayoverMin: snapshot.viewerQuickSettings?.avgLayoverMin || ''
@@ -3047,6 +3078,7 @@ function renderPairingTable() {
       legs: p.total_legs,
       max_legs_per_day: p.max_legs_per_day || 0,
       layovers: p.layover_cities,
+      shortest_lay: p.shortest_layover || 0,
       longest_lay: p.longest_layover,
       average_lay: p.average_layover || 0,
       first_leg_departure_mins: p.first_leg_departure_mins || 0,
@@ -3175,7 +3207,7 @@ function applyFilters() {
 
   if (base) pairingTable.addFilter('base', '=', base);
   if (days) pairingTable.addFilter('days', '=', parseInt(days));
-  if (!isNaN(minLay) && minLay > 0) pairingTable.addFilter('longest_lay', '>=', minLay);
+  if (!isNaN(minLay) && minLay > 0) pairingTable.addFilter('shortest_lay', '>=', minLay);
   if (!isNaN(maxLay) && maxLay > 0) pairingTable.addFilter('longest_lay', '<=', maxLay);
   if (!isNaN(maxLegs) && maxLegs > 0) pairingTable.addFilter('max_legs_per_day', '<=', maxLegs);
   if (!isNaN(minCredit) && minCredit > 0) pairingTable.addFilter('credit_hrs', '>=', minCredit);
@@ -3197,7 +3229,14 @@ function applyFilters() {
   if (!isNaN(rptMins)) pairingTable.addFilter((data, p) => data.report_mins === 0 || data.report_mins >= p.m, {m: rptMins});
 
   const rlsMins = timeInputToMins(rlsBefore);
-  if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.release_mins === 0 || data.release_mins <= p.m, {m: rlsMins});
+  const rlsAfterMins = timeInputToMins(viewerQuickSettings.earlyFinishAfter || '07:00');
+  if (!isNaN(rlsMins)) {
+    pairingTable.addFilter((data, p) => {
+      if (data.release_mins === 0) return true;
+      if (!isNaN(p.min) && data.release_mins < p.min) return false;
+      return data.release_mins <= p.max;
+    }, {min: isNaN(rlsAfterMins) ? 7 * 60 : rlsAfterMins, max: rlsMins});
+  }
   if (!isNaN(avgLayoverMin) && avgLayoverMin > 0) pairingTable.addFilter('average_lay', '>=', avgLayoverMin);
   syncQuickFilterButtons();
   syncDestinationSummary();
@@ -3402,6 +3441,7 @@ function scorePairing(p) {
   const startMins = p.report_minutes || timeStrToMinutes(p.report_time || '');
   const releaseMins = p.release_minutes || timeStrToMinutes(p.release_time || '');
   const avgLayover = p.average_layover || 0;
+  const shortestLayover = p.shortest_layover || 0;
 
   const efficiency = tafbH > 0 ? creditH / tafbH : 0;
   score += efficiency * (w.credit * 25); 
@@ -3436,15 +3476,27 @@ function scorePairing(p) {
   }
 
   if (!isNaN(releaseMins)) {
-    if (mode === 'home' || mode === 'balanced') {
-      if (releaseMins <= 18 * 60) score += 16;
-      if (releaseMins <= 17 * 60) score += 10;
+    const earlyAfter = timeInputToMins(viewerQuickSettings.earlyFinishAfter || '07:00');
+    const earlyBefore = timeInputToMins(viewerQuickSettings.earlyFinishBefore || '18:00');
+    if (!isNaN(earlyAfter) && !isNaN(earlyBefore) && releaseMins >= earlyAfter && releaseMins <= earlyBefore) {
+      if (mode === 'home' || mode === 'balanced') {
+        if (releaseMins <= 18 * 60) score += 16;
+        if (releaseMins <= 17 * 60) score += 10;
+      }
+    } else {
+      score -= 20;
     }
   }
 
   if (avgLayover > 0) {
     if (avgLayover >= Number(viewerQuickSettings.avgLayoverMin || 0)) score += 12;
     if (avgLayover >= 12) score += 8;
+  }
+
+  if (shortestLayover > 0 && shortestLayover >= Number(viewerQuickSettings.longLayoverMin || 0)) {
+    score += 10;
+  } else if (shortestLayover > 0 && shortestLayover < Number(viewerQuickSettings.longLayoverMin || 0)) {
+    score -= 8;
   }
 
   score -= (p.total_legs || 0) * 0.5;
@@ -3479,16 +3531,22 @@ function getEligiblePairings() {
   const maxLegs = parseFloat(document.getElementById('filter-max-legs').value);
   const minCredit = parseFloat(document.getElementById('filter-min-credit').value);
   const avgLayoverMin = parseFloat(viewerQuickSettings.avgLayoverMin);
+  const earlyFinishAfter = timeInputToMins(viewerQuickSettings.earlyFinishAfter || '07:00');
+  const earlyFinishBefore = timeInputToMins(viewerQuickSettings.earlyFinishBefore || '18:00');
   const destinationScope = bidProfile.destinationScope || 'all';
   const destinationCode = normalizeAirportCode(bidProfile.destinationCode);
 
   return allPairings.filter(p => {
     if (gdoDays.size > 0 && (p.all_dates||[]).some(d => gdoDays.has(d))) return false;
-    if (!isNaN(minLay) && minLay > 0 && (p.longest_layover || 0) < minLay) return false;
+    if (!isNaN(minLay) && minLay > 0 && (p.shortest_layover || 0) < minLay) return false;
     if (!isNaN(maxLay) && maxLay > 0 && (p.longest_layover || 0) > maxLay) return false;
     if (!isNaN(maxLegs) && maxLegs > 0 && (p.max_legs_per_day || 0) > maxLegs) return false;
     if (!isNaN(minCredit) && minCredit > 0 && (p.correctedcredit || 0) < minCredit) return false;
     if (!isNaN(avgLayoverMin) && avgLayoverMin > 0 && (p.average_layover || 0) < avgLayoverMin) return false;
+    if (!isNaN(earlyFinishAfter) && !isNaN(earlyFinishBefore)) {
+      const releaseMins = p.release_minutes || timeStrToMinutes(p.release_time || '');
+      if (!isNaN(releaseMins) && releaseMins > 0 && (releaseMins < earlyFinishAfter || releaseMins > earlyFinishBefore)) return false;
+    }
     if ((destinationScope !== 'all' || destinationCode) && !pairingMatchesDestinationFilter(p, destinationScope, destinationCode)) return false;
     return true;
   });
