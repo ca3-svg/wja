@@ -156,7 +156,7 @@
     
     <div class="flex items-center gap-2 sm:gap-3">
       <!-- Pilot Profile Settings Trigger -->
-      <button onclick="document.getElementById('cba-modal').classList.remove('hidden')" class="hidden flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-200 dark:border-indigo-500/30 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-500/20 font-medium text-xs">
+      <button onclick="document.getElementById('cba-modal').classList.remove('hidden')" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-200 dark:border-indigo-500/30 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-500/20 font-medium text-xs">
         <i data-lucide="user-cog" class="w-4 h-4"></i>
         <span class="hidden sm:inline">Pilot Profile (CBA)</span>
       </button>
@@ -229,6 +229,29 @@
 
     <div class="p-5 flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-dark-900/50" id="schedule-calendar-container">
        <!-- Dynamic calendar injected here -->
+    </div>
+  </div>
+</div>
+
+<!-- Pairing Details Modal -->
+<div id="pairing-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col">
+    <div class="flex justify-between items-center p-5 border-b border-slate-200 dark:border-dark-700 gap-4">
+      <div class="min-w-0">
+        <h2 id="pairing-modal-title" class="text-xl font-bold text-slate-900 dark:text-white truncate"></h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Pairing details from the uploaded document</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="pairing-modal-copy" class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="copyPairingModalText()">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
+        </button>
+        <button onclick="closePairingModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+    <div class="p-5 flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-dark-900/50">
+      <pre id="pairing-modal-text" class="whitespace-pre-wrap break-words text-sm leading-6 font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-4 shadow-sm"></pre>
     </div>
   </div>
 </div>
@@ -1301,6 +1324,17 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // Select Viewer by default
 document.querySelector('[data-tab="viewer"]').click();
+document.getElementById('pairing-modal').addEventListener('click', e => {
+  if (e.target && e.target.id === 'pairing-modal') closePairingModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePairingModal();
+});
+document.getElementById('stats-bar').addEventListener('click', e => {
+  const card = e.target.closest('.stat-card');
+  if (!card) return;
+  setQuickFilter(card.dataset.statAction);
+});
 
 // =====================================================================
 // TOAST NOTIFICATIONS
@@ -1799,44 +1833,42 @@ function parseFullText(content) {
 // FORMATTERS & NEW WINDOW HANDLER
 // =====================================================================
 function openPairingWindow(text, title) {
-  const win = window.open('', '_blank', 'width=800,height=700');
-  if (!win) {
-    showToast('Popup blocked! Please allow popups for this site.', 'error');
-    return;
+  showPairingModal(text, title);
+}
+
+function showPairingModal(text, title) {
+  const modal = document.getElementById('pairing-modal');
+  const titleEl = document.getElementById('pairing-modal-title');
+  const textEl = document.getElementById('pairing-modal-text');
+  if (!modal || !titleEl || !textEl) return;
+  titleEl.textContent = title || 'Pairing Details';
+  textEl.textContent = text || '(no pairing text available)';
+  modal.classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closePairingModal() {
+  const modal = document.getElementById('pairing-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function copyPairingModalText() {
+  const textEl = document.getElementById('pairing-modal-text');
+  if (!textEl) return;
+  try {
+    await navigator.clipboard.writeText(textEl.innerText || textEl.textContent || '');
+    const btn = document.getElementById('pairing-modal-copy');
+    if (btn) {
+      btn.innerHTML = '<i data-lucide="copy-check" class="w-3.5 h-3.5"></i> Copied';
+      lucide.createIcons();
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy';
+        lucide.createIcons();
+      }, 1800);
+    }
+  } catch (err) {
+    showToast('Could not copy pairing text', 'error');
   }
-  
-  const isDark = document.documentElement.classList.contains('dark');
-  const bg = isDark ? '#0f172a' : '#f8fafc';
-  const fg = isDark ? '#e2e8f0' : '#334155';
-  const border = isDark ? '#334155' : '#cbd5e1';
-  const preBg = isDark ? '#1e293b' : '#ffffff';
-  
-  win.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${title}</title>
-      <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: ${bg}; color: ${fg}; padding: 2rem; margin: 0; line-height: 1.6; }
-        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-        h2 { margin: 0; font-size: 1.5rem; color: ${isDark ? '#fff' : '#000'}; }
-        .copy-btn { background: #0ea5e9; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: background 0.2s; }
-        .copy-btn:hover { background: #0284c7; }
-        hr { border: 0; border-top: 1px solid ${border}; margin: 0 0 1.5rem 0; }
-        pre { background: ${preBg}; border: 1px solid ${border}; padding: 1.5rem; border-radius: 0.75rem; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h2>${title}</h2>
-        <button class="copy-btn" onclick="navigator.clipboard.writeText(document.querySelector('pre').innerText); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy Text', 2000);">Copy Text</button>
-      </div>
-      <hr />
-      <pre>${text}</pre>
-    </body>
-    </html>
-  `);
-  win.document.close();
 }
 
 function flightsFormatter(cell) {
@@ -1885,7 +1917,7 @@ function renderStats() {
   const dh = allPairings.filter(p => p.has_deadhead).length;
   const avgCredit = total ? (allPairings.reduce((s,p) => s + (p.correctedcredit||0), 0) / total).toFixed(1) : 0;
   
-  const StatCard = (label, val, icon, colorKey) => {
+  const StatCard = (label, val, icon, colorKey, action = '') => {
     const styles = {
       brand: 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400',
       emerald: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
@@ -1895,9 +1927,10 @@ function renderStats() {
       rose: 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
     };
     const colorClass = styles[colorKey] || styles.brand;
+    const clickable = action ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all' : '';
     
     return `
-      <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-4 flex items-center justify-between shadow-sm">
+      <button type="button" data-stat-action="${action}" class="stat-card text-left bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-4 flex items-center justify-between shadow-sm ${clickable}">
         <div>
           <div class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">${label}</div>
           <div class="text-xl font-bold text-slate-900 dark:text-white">${val}</div>
@@ -1905,25 +1938,89 @@ function renderStats() {
         <div class="p-2 rounded-lg ${colorClass}">
           <i data-lucide="${icon}" class="w-5 h-5"></i>
         </div>
-      </div>
+      </button>
     `;
   };
 
   bar.innerHTML = `
-    ${StatCard('Total Pairings', total, 'layers', 'brand')}
-    ${StatCard('Avg Credit', avgCredit + 'h', 'clock', 'emerald')}
-    ${StatCard('Commutable', commutable, 'car', 'blue')}
-    ${StatCard('Lazy Trips', lazy, 'coffee', 'amber')}
-    ${StatCard('Redeyes', redeyes, 'moon', 'purple')}
-    ${StatCard('Deadheads', dh, 'users', 'rose')}
+    ${StatCard('Total Pairings', total, 'layers', 'brand', 'reset')}
+    ${StatCard('Avg Credit', avgCredit + 'h', 'clock', 'emerald', 'credit')}
+    ${StatCard('Commutable', commutable, 'car', 'blue', 'commutable')}
+    ${StatCard('Lazy Trips', lazy, 'coffee', 'amber', 'lazy')}
+    ${StatCard('Redeyes', redeyes, 'moon', 'purple', 'redeye')}
+    ${StatCard('Deadheads', dh, 'users', 'rose', 'deadhead')}
   `;
   lucide.createIcons();
+  syncQuickFilterButtons();
 }
 
 function timeInputToMins(val) {
   if (!val) return NaN;
   const [h, m] = val.split(':').map(Number);
   return h * 60 + m;
+}
+
+function clearQuickFilters() {
+  const ids = [
+    'filter-redeye',
+    'filter-lazy',
+    'filter-commutable',
+    'filter-deadhead',
+    'filter-weekday',
+    'filter-avoid-p-etops',
+    'filter-avoid-a-etops'
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+  const search = document.getElementById('search-input');
+  const base = document.getElementById('filter-base');
+  const days = document.getElementById('filter-days');
+  const rptAfter = document.getElementById('filter-rpt-after');
+  const rlsBefore = document.getElementById('filter-rls-before');
+  if (search) search.value = '';
+  if (base) base.value = '';
+  if (days) days.value = '';
+  if (rptAfter) rptAfter.value = '';
+  if (rlsBefore) rlsBefore.value = '';
+}
+
+function setQuickFilter(kind) {
+  const mapping = {
+    deadhead: 'filter-deadhead',
+    redeye: 'filter-redeye',
+    lazy: 'filter-lazy',
+    commutable: 'filter-commutable'
+  };
+
+  if (kind === 'reset') {
+    clearQuickFilters();
+    applyFilters();
+    return;
+  }
+
+  if (kind === 'credit') {
+    const threshold = allPairings.length
+      ? (allPairings.reduce((s, p) => s + (p.correctedcredit || 0), 0) / allPairings.length)
+      : 0;
+    const creditInput = document.getElementById('filter-min-credit');
+    if (creditInput) {
+      const nextValue = threshold ? threshold.toFixed(1) : '';
+      creditInput.value = creditInput.value === nextValue ? '' : nextValue;
+    }
+    applyFilters();
+    return;
+  }
+
+  const targetId = mapping[kind];
+  if (!targetId) return;
+
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  target.checked = !target.checked;
+  applyFilters();
 }
 
 function populateBaseFilter() {
@@ -1939,6 +2036,32 @@ function populateBaseFilter() {
   if (bases.includes(current)) {
     select.value = current;
   }
+}
+
+function syncQuickFilterButtons() {
+  const quickOn =
+    document.getElementById('filter-deadhead')?.checked ||
+    document.getElementById('filter-redeye')?.checked ||
+    document.getElementById('filter-lazy')?.checked ||
+    document.getElementById('filter-commutable')?.checked ||
+    !!document.getElementById('filter-min-credit')?.value;
+
+  document.querySelectorAll('.stat-card').forEach(btn => {
+    const action = btn.dataset.statAction;
+    const isActive =
+      (action === 'deadhead' && document.getElementById('filter-deadhead')?.checked) ||
+      (action === 'redeye' && document.getElementById('filter-redeye')?.checked) ||
+      (action === 'lazy' && document.getElementById('filter-lazy')?.checked) ||
+      (action === 'commutable' && document.getElementById('filter-commutable')?.checked) ||
+      (action === 'credit' && !!document.getElementById('filter-min-credit')?.value) ||
+      (action === 'reset' && !quickOn);
+
+    if (isActive) {
+      btn.classList.add('ring-2', 'ring-brand-500', 'ring-offset-2', 'ring-offset-white', 'dark:ring-offset-dark-900');
+    } else {
+      btn.classList.remove('ring-2', 'ring-brand-500', 'ring-offset-2', 'ring-offset-white', 'dark:ring-offset-dark-900');
+    }
+  });
 }
 
 function renderPairingTable() {
@@ -2087,6 +2210,7 @@ function applyFilters() {
 
   const rlsMins = timeInputToMins(rlsBefore);
   if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.release_mins === 0 || data.release_mins <= p.m, {m: rlsMins});
+  syncQuickFilterButtons();
 }
 
 // =====================================================================
