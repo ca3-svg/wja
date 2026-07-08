@@ -117,6 +117,12 @@
     align-items: flex-start !important; 
   }
 
+  #viewer-drawer { overflow: hidden; }
+  #viewer-drawer.viewer-drawer-collapsed { width: 3.75rem !important; }
+  #viewer-drawer.viewer-drawer-collapsed #viewer-drawer-body { display: none !important; }
+  #viewer-drawer.viewer-drawer-collapsed #viewer-destination-summary { display: none !important; }
+  #viewer-drawer.viewer-drawer-collapsed .drawer-title { display: none !important; }
+
   input[type="time"] { color-scheme: light; }
   .dark input[type="time"] { color-scheme: dark; }
 
@@ -293,74 +299,200 @@
     <!-- Stats Dashboard -->
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6 hidden" id="stats-bar"></div>
 
-    <!-- Filters -->
-    <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-4 mb-4 hidden flex-col gap-4 shadow-sm" id="filter-bar">
-      <div class="flex items-center justify-between">
-        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4"></i> Data Filters</h4>
-        <div class="relative" id="col-picker-wrap">
-          <button class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="toggleColPicker(event)">
-            <i data-lucide="columns" class="w-3.5 h-3.5"></i> Columns
+    <!-- Viewer Layout -->
+    <div class="flex flex-col xl:flex-row gap-4 min-h-0">
+      <aside id="viewer-drawer" class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-sm sticky top-16 z-30 w-full xl:w-[360px] shrink-0 transition-all duration-200">
+        <div class="flex items-center justify-between gap-3 p-3 border-b border-slate-200 dark:border-dark-700">
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <i data-lucide="filter" class="w-4 h-4"></i> Filters
+            </div>
+            <div id="viewer-destination-summary" class="mt-1 text-[11px] text-slate-500 dark:text-slate-400"></div>
+          </div>
+          <button class="btn-base btn-secondary !py-1.5 !px-2 !text-xs" onclick="toggleViewerDrawer()" title="Collapse drawer">
+            <i data-lucide="panel-left-close" class="w-3.5 h-3.5"></i>
           </button>
-          <div id="col-picker" class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg shadow-xl z-50 py-2 max-h-64 overflow-y-auto custom-scrollbar"></div>
         </div>
-      </div>
-      
-      <div class="flex flex-wrap gap-3 items-center">
-        <div class="relative w-full md:w-64">
-          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"></i>
-          <input type="text" id="search-input" class="input-base pl-9 w-full" placeholder="Search trips, routes, layovers...">
-        </div>
-        
-        <select id="filter-base" class="input-base w-24">
-          <option value="">All Bases</option>
-        </select>
+        <div id="viewer-drawer-body" class="p-3 flex flex-col gap-3">
+          <div class="flex flex-wrap items-start justify-start gap-2">
+            <div class="flex items-center gap-2">
+              <input type="text" id="viewer-view-name" class="input-base py-1.5 px-2 text-xs w-32" placeholder="Save view">
+              <select id="viewer-view-select" class="input-base py-1.5 px-2 text-xs w-36"></select>
+            </div>
+            <button class="btn-base btn-primary !py-1.5 !px-3 !text-xs" onclick="saveViewerView()">Save</button>
+            <button class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="loadSelectedViewerView()">Load</button>
+            <button class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="deleteSelectedViewerView()">Delete</button>
+            <div class="relative" id="col-picker-wrap">
+              <button class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="toggleColPicker(event)">
+                <i data-lucide="columns" class="w-3.5 h-3.5"></i> Columns
+              </button>
+              <div id="col-picker" class="hidden absolute left-0 top-full mt-2 w-48 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg shadow-xl z-50 py-2 max-h-64 overflow-y-auto custom-scrollbar"></div>
+            </div>
+          </div>
 
-        <select id="filter-days" class="input-base w-32">
-          <option value="">All Durations</option>
-          <option value="2">2-day Trip</option>
-          <option value="3">3-day Trip</option>
-          <option value="4">4-day Trip</option>
-          <option value="5">5-day Trip</option>
-        </select>
-        
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-slate-500 dark:text-slate-400">RPT After</span>
-          <input type="time" id="filter-rpt-after" class="input-base py-1 px-2 w-24 text-xs" title="Report time after">
+          <div id="active-filter-chip-rail" class="flex flex-wrap gap-2"></div>
+
+          <div class="grid grid-cols-2 gap-2" id="viewer-filter-shortcuts">
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="home" onclick="toggleViewerShortcut('home')">YOW home</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="usa" onclick="toggleViewerShortcut('usa')">USA layovers</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="intl" onclick="toggleViewerShortcut('intl')">International</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="long" onclick="toggleViewerShortcut('long')">Long layovers</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="late" onclick="toggleViewerShortcut('late')">Late start</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="early" onclick="toggleViewerShortcut('early')">Early finish</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="fewlegs" onclick="toggleViewerShortcut('fewlegs')">Few legs</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="commutable" onclick="toggleViewerShortcut('commutable')">Commutable</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="lazy" onclick="toggleViewerShortcut('lazy')">Lazy</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="redeye" onclick="toggleViewerShortcut('redeye')">Redeye</button>
+            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="deadhead" onclick="toggleViewerShortcut('deadhead')">Deadhead</button>
+          </div>
+
+          <div class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-3">
+            <div class="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <i data-lucide="settings-2" class="w-4 h-4 text-brand-500"></i> Shortcut settings
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="text-[11px] text-slate-500 dark:text-slate-400">
+                Late start after
+                <input type="time" id="viewer-late-after" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
+              </label>
+              <label class="text-[11px] text-slate-500 dark:text-slate-400">
+                Early finish before
+                <input type="time" id="viewer-early-before" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
+              </label>
+              <label class="text-[11px] text-slate-500 dark:text-slate-400">
+                Long layover min
+                <input type="number" id="viewer-long-lay-min" min="0" step="0.5" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
+              </label>
+              <label class="text-[11px] text-slate-500 dark:text-slate-400">
+                Few legs max
+                <input type="number" id="viewer-few-legs-max" min="0" step="1" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
+              </label>
+            </div>
+          </div>
+
+          <details class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl">
+            <summary class="p-3 font-medium text-slate-700 dark:text-slate-300 cursor-pointer flex justify-between items-center">
+              <span class="flex items-center gap-2 text-sm"><i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-500"></i> More filters</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">Search, layovers, destination details</span>
+            </summary>
+            <div class="p-3 flex flex-col gap-3 border-t border-slate-200 dark:border-dark-700">
+              <div class="space-y-2">
+                <div class="relative">
+                  <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"></i>
+                  <input type="text" id="search-input" class="input-base pl-9 w-full" placeholder="Search trips, routes, layovers...">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <select id="filter-base" class="input-base w-full">
+                    <option value="">All Bases</option>
+                  </select>
+                  <select id="filter-days" class="input-base w-full">
+                    <option value="">All Durations</option>
+                    <option value="2">2-day Trip</option>
+                    <option value="3">3-day Trip</option>
+                    <option value="4">4-day Trip</option>
+                    <option value="5">5-day Trip</option>
+                  </select>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">RPT After</span>
+                    <input type="time" id="filter-rpt-after" class="input-base py-1 px-2 w-24 text-xs">
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400">RLS Before</span>
+                    <input type="time" id="filter-rls-before" class="input-base py-1 px-2 w-24 text-xs">
+                  </div>
+                </div>
+                <button class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="clearViewerFilters()">Clear all</button>
+              </div>
+
+              <div class="flex flex-wrap gap-3 pt-2 border-t border-slate-200 dark:border-dark-700">
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="filter-redeye" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Redeye
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="filter-lazy" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Lazy Pairing
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="filter-commutable" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Commutable
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="filter-deadhead" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Deadhead (DH)
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="filter-weekday" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Weekday Only
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer" title="Exclude Hawaii">
+                  <input type="checkbox" id="filter-avoid-p-etops" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> No P-ETOPS
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer" title="Exclude Europe">
+                  <input type="checkbox" id="filter-avoid-a-etops" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> No A-ETOPS
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3">
+                <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-3">
+                  <div class="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <i data-lucide="clock-3" class="w-4 h-4 text-brand-500"></i> Layover window
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="text-xs text-slate-500 dark:text-slate-400">
+                      Min layover
+                      <input type="number" id="filter-min-lay" min="0" step="0.5" class="input-base mt-1 w-full py-1 px-2 text-sm">
+                    </label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400">
+                      Max layover
+                      <input type="number" id="filter-max-lay" min="0" step="0.5" class="input-base mt-1 w-full py-1 px-2 text-sm">
+                    </label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400">
+                      Max legs/day
+                      <input type="number" id="filter-max-legs" min="0" step="1" class="input-base mt-1 w-full py-1 px-2 text-sm">
+                    </label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400">
+                      Min credit
+                      <input type="number" id="filter-min-credit" min="0" step="0.5" class="input-base mt-1 w-full py-1 px-2 text-sm">
+                    </label>
+                  </div>
+                </div>
+
+                <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-3">
+                  <div class="flex items-center justify-between gap-3 mb-2">
+                    <div class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <i data-lucide="map-pinned" class="w-4 h-4 text-brand-500"></i> Layover geography
+                    </div>
+                    <button class="btn-base btn-secondary !py-1.5 !px-3 !text-[11px]" onclick="clearDestinationFilters()">Reset</button>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mb-2" id="viewer-destination-scope">
+                    <button type="button" data-scope="all" class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="setViewerDestinationScope('all')">All</button>
+                    <button type="button" data-scope="usa" class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="setViewerDestinationScope('usa')">USA</button>
+                    <button type="button" data-scope="intl" class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="setViewerDestinationScope('intl')">International</button>
+                  </div>
+                  <div class="flex gap-2">
+                    <input type="text" id="destination-code-input" class="input-base flex-1 py-1.5 px-2 text-sm" placeholder="YOW, JFK, CUN, LHR" onkeydown="if(event.key==='Enter'){event.preventDefault(); applyDestinationCodeFilter();}">
+                    <button class="btn-base btn-primary !py-2 !px-3 !text-xs" onclick="applyDestinationCodeFilter()">Filter</button>
+                  </div>
+                  <div class="mt-3">
+                    <label class="text-xs text-slate-500 dark:text-slate-400">Suggested layover codes</label>
+                    <div id="destination-suggestions" class="mt-2 flex flex-wrap gap-2"></div>
+                  </div>
+                  <div class="mt-3">
+                    <label class="text-xs text-slate-500 dark:text-slate-400">Pinned destination codes</label>
+                    <div class="flex gap-2 mt-1">
+                      <input type="text" id="favorite-dest-input" class="input-base flex-1 py-1.5 px-2 text-sm" placeholder="YOW, YYZ, JFK, LHR" onkeydown="if(event.key==='Enter'){event.preventDefault(); addFavoriteDestination();}">
+                      <button class="btn-base btn-secondary !py-2 !px-3 !text-xs" onclick="addFavoriteDestination()">Save</button>
+                    </div>
+                    <div id="favorite-destination-list" class="mt-2 flex flex-wrap gap-2"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-slate-500 dark:text-slate-400">RLS Before</span>
-          <input type="time" id="filter-rls-before" class="input-base py-1 px-2 w-24 text-xs" title="Release time before">
-        </div>
-      </div>
-      
-      <div class="flex flex-wrap gap-4 pt-2 border-t border-slate-200 dark:border-dark-700">
-        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
-          <input type="checkbox" id="filter-redeye" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Redeye
-        </label>
-        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
-          <input type="checkbox" id="filter-lazy" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Lazy Pairing
-        </label>
-        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
-          <input type="checkbox" id="filter-commutable" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Commutable
-        </label>
-        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
-          <input type="checkbox" id="filter-deadhead" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Deadhead (DH)
-        </label>
-        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
-          <input type="checkbox" id="filter-weekday" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Weekday Only
-        </label>
-        <div class="w-px h-5 bg-slate-300 dark:bg-dark-700 mx-2"></div>
-        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white" title="Exclude Hawaii">
-          <input type="checkbox" id="filter-avoid-p-etops" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> No P-ETOPS
-        </label>
-        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white" title="Exclude Europe">
-          <input type="checkbox" id="filter-avoid-a-etops" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> No A-ETOPS
-        </label>
+      </aside>
+
+      <div id="viewer-content" class="flex-1 min-w-0">
+        <!-- Table Container -->
+        <div id="pairing-table" class="w-full text-sm flex-1"></div>
       </div>
     </div>
-
-    <!-- Table Container -->
-    <div id="pairing-table" class="w-full text-sm flex-1"></div>
   </div>
 
   <!-- TAB 2: GDO PLANNER -->
@@ -505,45 +637,6 @@
                 <button class="btn-base btn-secondary !py-2 !px-3 !text-xs" onclick="deleteSelectedBidProfile()">Delete</button>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">
-            <i data-lucide="map-pinned" class="w-4 h-4 text-brand-500"></i> Destination Focus
-          </div>
-          <div class="flex flex-wrap gap-2 mb-3" id="destination-chip-row">
-            <button class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="toggleDestinationMode('home')">YOW layovers</button>
-            <button class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="toggleDestinationMode('favorites')">Favorites</button>
-            <button class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="toggleDestinationMode('any')">Any destination</button>
-          </div>
-          <div class="flex flex-wrap gap-3 items-end">
-            <div class="flex-1 min-w-[260px]">
-              <label class="text-xs text-slate-500 dark:text-slate-400">Add favorite airport codes</label>
-              <div class="flex gap-2 mt-1">
-                <input type="text" id="favorite-dest-input" class="input-base flex-1 py-1.5 px-2 text-sm" placeholder="YOW, YYZ, JFK, LHR" onkeydown="if(event.key==='Enter'){event.preventDefault(); addFavoriteDestination();}">
-                <button class="btn-base btn-secondary !py-2 !px-3 !text-xs" onclick="addFavoriteDestination()">Add</button>
-              </div>
-            </div>
-            <div class="min-w-[240px] flex-1">
-              <label class="text-xs text-slate-500 dark:text-slate-400">Suggested destinations</label>
-              <div id="destination-suggestions" class="mt-1 flex flex-wrap gap-2"></div>
-            </div>
-          </div>
-          <div id="favorite-destination-list" class="mt-3 flex flex-wrap gap-2"></div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-4">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Layover (hrs):</span>
-            <input type="number" id="filter-min-lay" placeholder="Min" class="input-base py-1 px-2 w-16 text-center text-sm" onchange="if(bidTable) runBidBuilder(false)">
-            <span class="text-slate-400 dark:text-slate-500">-</span>
-            <input type="number" id="filter-max-lay" placeholder="Max" class="input-base py-1 px-2 w-16 text-center text-sm" onchange="if(bidTable) runBidBuilder(false)">
-          </div>
-
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Min Credit:</span>
-            <input type="number" id="filter-min-credit" placeholder="Hrs" class="input-base py-1 px-2 w-16 text-center text-sm" onchange="if(bidTable) runBidBuilder(false)">
           </div>
         </div>
 
@@ -1230,9 +1323,19 @@ let bidProfile = {
   targetCredit: 75,
   targetDays: 16,
   destinationMode: 'any',
+  destinationScope: 'all',
+  destinationCode: '',
   favoriteDestinations: []
 };
 let savedBidProfiles = {};
+let savedViewerViews = {};
+let viewerQuickSettings = {
+  lateStartAfter: '10:00',
+  earlyFinishBefore: '18:00',
+  longLayoverMin: '10',
+  fewLegsMax: '2'
+};
+let viewerDrawerCollapsed = false;
 
 // Sourced from user/app state (currently mock defaults until Reserve UI is built)
 let pilotState = {
@@ -1245,6 +1348,7 @@ let pilotState = {
 // =====================================================================
 function saveData() {
   try {
+    updateViewerQuickSettingsFromUI();
     const data = {
       allPairings,
       gdoDays: Array.from(gdoDays),
@@ -1252,7 +1356,10 @@ function saveData() {
       pairingMonth,
       bidWeights,
       bidProfile,
-      savedBidProfiles
+      savedBidProfiles,
+      savedViewerViews,
+      viewerQuickSettings,
+      viewerDrawerCollapsed
     };
     localStorage.setItem('westjet_bid_data', JSON.stringify(data));
     document.getElementById('clear-data-btn').classList.remove('hidden');
@@ -1281,17 +1388,25 @@ function loadData() {
           targetCredit: data.bidProfile.targetCredit || 75,
           targetDays: data.bidProfile.targetDays || 16,
           destinationMode: data.bidProfile.destinationMode || 'any',
+          destinationScope: data.bidProfile.destinationScope || 'all',
+          destinationCode: data.bidProfile.destinationCode || '',
           favoriteDestinations: Array.isArray(data.bidProfile.favoriteDestinations) ? data.bidProfile.favoriteDestinations : []
         };
       }
       savedBidProfiles = data.savedBidProfiles || {};
+      savedViewerViews = data.savedViewerViews || {};
+      viewerQuickSettings = {
+        lateStartAfter: data.viewerQuickSettings?.lateStartAfter || '10:00',
+        earlyFinishBefore: data.viewerQuickSettings?.earlyFinishBefore || '18:00',
+        longLayoverMin: data.viewerQuickSettings?.longLayoverMin || '10',
+        fewLegsMax: data.viewerQuickSettings?.fewLegsMax || '2'
+      };
+      viewerDrawerCollapsed = !!data.viewerDrawerCollapsed;
 
       if (allPairings.length > 0) {
         document.getElementById('file-label').textContent = 'Loaded from Saved Data';
         document.getElementById('upload-zone').classList.add('hidden');
         document.getElementById('stats-bar').classList.remove('hidden');
-        document.getElementById('filter-bar').classList.remove('hidden');
-        document.getElementById('filter-bar').classList.add('flex');
         document.getElementById('clear-data-btn').classList.remove('hidden');
         document.getElementById('clear-data-btn').classList.add('flex');
         
@@ -1299,6 +1414,7 @@ function loadData() {
         renderPairingTable();
         populateBaseFilter();
         syncBidProfileUI();
+        applyFilters();
       }
     }
   } catch (e) {
@@ -1503,14 +1619,14 @@ async function handleFile(file) {
     renderStats();
     renderPairingTable();
     syncBidProfileUI();
+    applyFilters();
     
     fill.style.width = '100%'; pctText.textContent = '100%';
     setTimeout(() => { 
       progBar.classList.add('hidden'); 
       document.getElementById('stats-bar').classList.remove('hidden');
-      document.getElementById('filter-bar').classList.remove('hidden');
-      document.getElementById('filter-bar').classList.add('flex');
       populateBaseFilter();
+      syncViewerFilterUI();
     }, 500);
     
     saveData();
@@ -1814,6 +1930,7 @@ function parseTripBlock(block) {
   let totalLegs = 0;
   for (const d of Object.values(trip.days)) totalLegs += d.length;
   trip.total_legs = totalLegs;
+  trip.max_legs_per_day = Math.max(0, ...Object.values(trip.days).map(d => (d || []).length));
 
   const routes = [];
   for (const dayNum of sortedDays) {
@@ -2043,6 +2160,32 @@ function normalizeAirportCode(value) {
   return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+const CANADIAN_AIRPORTS = new Set([
+  'YOW','YUL','YYZ','YVR','YYC','YEG','YWG','YHZ','YQB','YXE','YQR','YQT','YYJ','YXU','YQM','YQY','YCD','YXX','YLW','YXX','YTZ','YHM','YKF','YCG','YXS','YQU','YXT','YYE','YQG','YYT','YZF','YLL','YQX','YBG','YVO','YFA','YFC','YQF','YQX','YTS','YGP'
+]);
+
+const US_AIRPORTS = new Set([
+  'ATL','AUS','BNA','BOS','BWI','BUR','CLT','CLE','CMH','CVG','DAL','DCA','DEN','DFW','DTW','EWR','FLL','HNL','HOU','IAD','IAH','JFK','LAS','LAX','LGA','MCI','MDW','MEM','MIA','MSP','MSY','OAK','OGG','OMA','ONT','ORD','PDX','PHL','PHX','PSP','PIT','RDU','RNO','RSW','SAN','SAT','SEA','SFO','SJC','SLC','SMF','SNA','SRQ','STL','TPA','TUS','MCO','RIC','ABQ','ANC','IND','MKE','BHM','PBI','CHS','BUF','JAX','GSO','SAV','TUL','OKC','FAR','FAT','GSP','KOA','LIH','LIT','MHT','MOB','SDF','TYS','XNA'
+]);
+
+function getAirportRegion(code) {
+  const normalized = normalizeAirportCode(code);
+  if (!normalized) return 'unknown';
+  if (CANADIAN_AIRPORTS.has(normalized)) return 'canada';
+  if (US_AIRPORTS.has(normalized)) return 'usa';
+  return 'intl';
+}
+
 function extractPairingStations(p) {
   const stations = new Set();
   if (!p) return stations;
@@ -2062,32 +2205,100 @@ function extractPairingStations(p) {
   return stations;
 }
 
-function getTopDestinationSuggestions(limit = 8) {
-  const counts = new Map();
+function getDestinationBuckets() {
+  const buckets = {
+    usa: new Map(),
+    intl: new Map()
+  };
+
   allPairings.forEach(p => {
+    const seen = new Set();
     (p.layovers || []).forEach(l => {
       const code = normalizeAirportCode(l.location);
-      if (!code) return;
-      counts.set(code, (counts.get(code) || 0) + 1);
+      if (!code || seen.has(code)) return;
+      seen.add(code);
+      const region = getAirportRegion(code);
+      if (region === 'usa') {
+        buckets.usa.set(code, (buckets.usa.get(code) || 0) + 1);
+      } else if (region === 'intl') {
+        buckets.intl.set(code, (buckets.intl.get(code) || 0) + 1);
+      }
     });
   });
 
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([code]) => code);
+  return buckets;
+}
+
+function getTopDestinationSuggestions(limit = 8, scope = 'all') {
+  const buckets = getDestinationBuckets();
+  const source = scope === 'usa' ? buckets.usa : scope === 'intl' ? buckets.intl : null;
+
+  if (source) {
+    return [...source.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([code, count]) => ({ code, count, region: getAirportRegion(code) }));
+  }
+
+  return {
+    usa: [...buckets.usa.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([code, count]) => ({ code, count, region: 'usa' })),
+    intl: [...buckets.intl.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([code, count]) => ({ code, count, region: 'intl' }))
+  };
+}
+
+function pairingMatchesDestinationFilter(p, scope, code) {
+  const normalizedCode = normalizeAirportCode(code);
+  const codes = [...new Set((p.layovers || []).map(l => normalizeAirportCode(l.location)).filter(Boolean))];
+
+  if (normalizedCode && !codes.includes(normalizedCode)) return false;
+  if (scope === 'usa') return codes.some(c => getAirportRegion(c) === 'usa');
+  if (scope === 'intl') return codes.some(c => getAirportRegion(c) === 'intl');
+  return true;
 }
 
 function renderDestinationSuggestions() {
   const host = document.getElementById('destination-suggestions');
   if (!host) return;
-  const suggestions = getTopDestinationSuggestions(8);
-  const current = new Set((bidProfile.favoriteDestinations || []).map(normalizeAirportCode));
-  host.innerHTML = suggestions.length
-    ? suggestions.map(code => `
-      <button type="button" class="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${current.has(code) ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-500/30' : 'bg-white dark:bg-dark-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-dark-700 hover:border-brand-300 hover:text-brand-600'}" onclick="toggleSuggestedDestination('${code}')">${code}</button>
-    `).join('')
-    : '<span class="text-xs text-slate-500 dark:text-slate-400">Suggestions will appear after a PDF is loaded.</span>';
+  const scope = bidProfile.destinationScope || 'all';
+  const selected = normalizeAirportCode(bidProfile.destinationCode);
+  const renderChip = (item) => {
+    const active = selected === item.code;
+    const badgeClass = item.region === 'usa'
+      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'
+      : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30';
+    const baseClass = active
+      ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-dark-900'
+      : '';
+    return `
+      <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${active ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-500/30' : 'bg-white dark:bg-dark-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-dark-700 hover:border-brand-300 hover:text-brand-600'} ${baseClass}" onclick="applyDestinationSuggestion('${item.code}')">
+        <span>${item.code}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-full border ${badgeClass}">${item.region === 'usa' ? 'USA' : 'INTL'}</span>
+        <span class="text-[10px] text-slate-400 dark:text-slate-500">${item.count}</span>
+      </button>
+    `;
+  };
+
+  if (scope === 'all') {
+    const groups = getTopDestinationSuggestions(6, 'all');
+    const usaHtml = groups.usa.length
+      ? `<div><div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">USA</div><div class="flex flex-wrap gap-2">${groups.usa.map(renderChip).join('')}</div></div>`
+      : '';
+    const intlHtml = groups.intl.length
+      ? `<div><div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">International</div><div class="flex flex-wrap gap-2">${groups.intl.map(renderChip).join('')}</div></div>`
+      : '';
+    host.innerHTML = usaHtml || intlHtml ? `<div class="space-y-4">${usaHtml}${intlHtml}</div>` : '<span class="text-xs text-slate-500 dark:text-slate-400">Suggestions will appear after a PDF is loaded.</span>';
+  } else {
+    const items = getTopDestinationSuggestions(10, scope);
+    host.innerHTML = items.length
+      ? `<div class="flex flex-wrap gap-2">${items.map(renderChip).join('')}</div>`
+      : '<span class="text-xs text-slate-500 dark:text-slate-400">Suggestions will appear after a PDF is loaded.</span>';
+  }
 }
 
 function renderFavoriteDestinations() {
@@ -2105,6 +2316,206 @@ function renderFavoriteDestinations() {
   lucide.createIcons();
 }
 
+function syncDestinationSummary() {
+  const host = document.getElementById('viewer-destination-summary');
+  if (!host) return;
+  const scope = bidProfile.destinationScope || 'all';
+  const code = normalizeAirportCode(bidProfile.destinationCode);
+  const buckets = getDestinationBuckets();
+  const usaCount = [...buckets.usa.values()].reduce((sum, value) => sum + value, 0);
+  const intlCount = [...buckets.intl.values()].reduce((sum, value) => sum + value, 0);
+  const scopeLabel = scope === 'usa' ? 'USA destinations' : scope === 'intl' ? 'international destinations' : 'all destinations';
+  const codeLabel = code ? `specific code ${code}` : 'no specific code';
+  host.textContent = `${scopeLabel} · ${codeLabel} · ${usaCount} USA suggestions, ${intlCount} international suggestions found`;
+}
+
+function syncViewerDestinationUI() {
+  const codeInput = document.getElementById('destination-code-input');
+  if (codeInput) codeInput.value = bidProfile.destinationCode || '';
+  document.querySelectorAll('#viewer-destination-scope [data-scope]').forEach(btn => {
+    const active = btn.dataset.scope === (bidProfile.destinationScope || 'all');
+    if (active) {
+      btn.classList.add('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.remove('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
+    } else {
+      btn.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.add('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
+    }
+  });
+  renderDestinationSuggestions();
+  renderFavoriteDestinations();
+  syncDestinationSummary();
+}
+
+function syncViewerDrawerUI() {
+  const drawer = document.getElementById('viewer-drawer');
+  const toggleBtn = drawer?.querySelector('button[title="Collapse drawer"]');
+  const late = document.getElementById('viewer-late-after');
+  const early = document.getElementById('viewer-early-before');
+  const longLay = document.getElementById('viewer-long-lay-min');
+  const fewLegs = document.getElementById('viewer-few-legs-max');
+
+  if (drawer) {
+    drawer.classList.toggle('viewer-drawer-collapsed', !!viewerDrawerCollapsed);
+    drawer.style.width = viewerDrawerCollapsed ? '3.75rem' : '';
+  }
+  if (toggleBtn) {
+    toggleBtn.innerHTML = viewerDrawerCollapsed
+      ? '<i data-lucide="panel-left-open" class="w-3.5 h-3.5"></i>'
+      : '<i data-lucide="panel-left-close" class="w-3.5 h-3.5"></i>';
+  }
+  if (late) late.value = viewerQuickSettings.lateStartAfter || '10:00';
+  if (early) early.value = viewerQuickSettings.earlyFinishBefore || '18:00';
+  if (longLay) longLay.value = viewerQuickSettings.longLayoverMin || '10';
+  if (fewLegs) fewLegs.value = viewerQuickSettings.fewLegsMax || '2';
+  lucide.createIcons();
+}
+
+function toggleViewerDrawer() {
+  viewerDrawerCollapsed = !viewerDrawerCollapsed;
+  syncViewerFilterUI();
+  saveData();
+}
+
+function getViewerFilterSnapshot() {
+  return {
+    search: document.getElementById('search-input')?.value || '',
+    base: document.getElementById('filter-base')?.value || '',
+    days: document.getElementById('filter-days')?.value || '',
+    rptAfter: document.getElementById('filter-rpt-after')?.value || '',
+    rlsBefore: document.getElementById('filter-rls-before')?.value || '',
+    minLay: document.getElementById('filter-min-lay')?.value || '',
+    maxLay: document.getElementById('filter-max-lay')?.value || '',
+    maxLegs: document.getElementById('filter-max-legs')?.value || '',
+    minCredit: document.getElementById('filter-min-credit')?.value || '',
+    redeye: !!document.getElementById('filter-redeye')?.checked,
+    lazy: !!document.getElementById('filter-lazy')?.checked,
+    commutable: !!document.getElementById('filter-commutable')?.checked,
+    deadhead: !!document.getElementById('filter-deadhead')?.checked,
+    weekday: !!document.getElementById('filter-weekday')?.checked,
+    noPEtops: !!document.getElementById('filter-avoid-p-etops')?.checked,
+    noAEtops: !!document.getElementById('filter-avoid-a-etops')?.checked,
+    destinationScope: bidProfile.destinationScope || 'all',
+    destinationCode: normalizeAirportCode(bidProfile.destinationCode),
+    viewerQuickSettings: {
+      lateStartAfter: document.getElementById('viewer-late-after')?.value || viewerQuickSettings.lateStartAfter || '10:00',
+      earlyFinishBefore: document.getElementById('viewer-early-before')?.value || viewerQuickSettings.earlyFinishBefore || '18:00',
+      longLayoverMin: document.getElementById('viewer-long-lay-min')?.value || viewerQuickSettings.longLayoverMin || '10',
+      fewLegsMax: document.getElementById('viewer-few-legs-max')?.value || viewerQuickSettings.fewLegsMax || '2'
+    }
+  };
+}
+
+function applyViewerFilterSnapshot(snapshot = {}) {
+  const setValue = (id, value) => { const el = document.getElementById(id); if (el) el.value = value ?? ''; };
+  const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = !!value; };
+
+  setValue('search-input', snapshot.search || '');
+  setValue('filter-base', snapshot.base || '');
+  setValue('filter-days', snapshot.days || '');
+  setValue('filter-rpt-after', snapshot.rptAfter || '');
+  setValue('filter-rls-before', snapshot.rlsBefore || '');
+  setValue('filter-min-lay', snapshot.minLay || '');
+  setValue('filter-max-lay', snapshot.maxLay || '');
+  setValue('filter-max-legs', snapshot.maxLegs || '');
+  setValue('filter-min-credit', snapshot.minCredit || '');
+  setChecked('filter-redeye', snapshot.redeye);
+  setChecked('filter-lazy', snapshot.lazy);
+  setChecked('filter-commutable', snapshot.commutable);
+  setChecked('filter-deadhead', snapshot.deadhead);
+  setChecked('filter-weekday', snapshot.weekday);
+  setChecked('filter-avoid-p-etops', snapshot.noPEtops);
+  setChecked('filter-avoid-a-etops', snapshot.noAEtops);
+  bidProfile.destinationScope = snapshot.destinationScope || 'all';
+  bidProfile.destinationCode = normalizeAirportCode(snapshot.destinationCode || '');
+  viewerQuickSettings = {
+    lateStartAfter: snapshot.viewerQuickSettings?.lateStartAfter || '10:00',
+    earlyFinishBefore: snapshot.viewerQuickSettings?.earlyFinishBefore || '18:00',
+    longLayoverMin: snapshot.viewerQuickSettings?.longLayoverMin || '10',
+    fewLegsMax: snapshot.viewerQuickSettings?.fewLegsMax || '2'
+  };
+  syncViewerFilterUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
+function renderViewerSavedViews() {
+  const select = document.getElementById('viewer-view-select');
+  if (!select) return;
+  const names = Object.keys(savedViewerViews).sort();
+  select.innerHTML = names.length
+    ? names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')
+    : '<option value="">No saved views</option>';
+}
+
+function renderActiveFilterChips() {
+  const host = document.getElementById('active-filter-chip-rail');
+  if (!host) return;
+  const snapshot = getViewerFilterSnapshot();
+  const chips = [];
+  const addChip = (label, key) => chips.push(`<button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-500/30" onclick="clearViewerFilter('${key}')">${label}<i data-lucide="x" class="w-3 h-3"></i></button>`);
+
+  if (snapshot.search) addChip(`Search: ${escapeHtml(snapshot.search)}`, 'search');
+  if (snapshot.base) addChip(`Base: ${escapeHtml(snapshot.base)}`, 'base');
+  if (snapshot.days) addChip(`Duration: ${escapeHtml(snapshot.days)}d`, 'days');
+  if (snapshot.rptAfter) addChip(`RPT after ${escapeHtml(snapshot.rptAfter)}`, 'rptAfter');
+  if (snapshot.rlsBefore) addChip(`RLS before ${escapeHtml(snapshot.rlsBefore)}`, 'rlsBefore');
+  if (snapshot.minLay) addChip(`Min lay ${escapeHtml(snapshot.minLay)}h`, 'minLay');
+  if (snapshot.maxLay) addChip(`Max lay ${escapeHtml(snapshot.maxLay)}h`, 'maxLay');
+  if (snapshot.maxLegs) addChip(`Max legs/day ${escapeHtml(snapshot.maxLegs)}`, 'maxLegs');
+  if (snapshot.minCredit) addChip(`Min credit ${escapeHtml(snapshot.minCredit)}h`, 'minCredit');
+  if (snapshot.redeye) addChip('Redeye', 'redeye');
+  if (snapshot.lazy) addChip('Lazy', 'lazy');
+  if (snapshot.commutable) addChip('Commutable', 'commutable');
+  if (snapshot.deadhead) addChip('Deadhead', 'deadhead');
+  if (snapshot.weekday) addChip('Weekday only', 'weekday');
+  if (snapshot.noPEtops) addChip('No P-ETOPS', 'noPEtops');
+  if (snapshot.noAEtops) addChip('No A-ETOPS', 'noAEtops');
+  if (snapshot.destinationScope !== 'all') addChip(snapshot.destinationScope === 'usa' ? 'USA layovers' : 'International layovers', 'destinationScope');
+  if (snapshot.destinationCode) addChip(`Code ${escapeHtml(snapshot.destinationCode)}`, 'destinationCode');
+
+  host.innerHTML = chips.length
+    ? chips.join('')
+    : '<span class="text-xs text-slate-500 dark:text-slate-400">No active viewer filters yet.</span>';
+  lucide.createIcons();
+}
+
+function syncViewerShortcutButtons() {
+  const snapshot = getViewerFilterSnapshot();
+  document.querySelectorAll('#viewer-filter-shortcuts [data-shortcut]').forEach(btn => {
+    const key = btn.dataset.shortcut;
+    const active =
+      (key === 'home' && snapshot.destinationCode === 'YOW') ||
+      (key === 'usa' && snapshot.destinationScope === 'usa') ||
+      (key === 'intl' && snapshot.destinationScope === 'intl') ||
+      (key === 'long' && snapshot.minLay === (viewerQuickSettings.longLayoverMin || '10')) ||
+      (key === 'late' && snapshot.rptAfter === (viewerQuickSettings.lateStartAfter || '10:00')) ||
+      (key === 'early' && snapshot.rlsBefore === (viewerQuickSettings.earlyFinishBefore || '18:00')) ||
+      (key === 'fewlegs' && snapshot.maxLegs === (viewerQuickSettings.fewLegsMax || '2')) ||
+      (key === 'commutable' && snapshot.commutable) ||
+      (key === 'lazy' && snapshot.lazy) ||
+      (key === 'redeye' && snapshot.redeye) ||
+      (key === 'deadhead' && snapshot.deadhead);
+
+    if (active) {
+      btn.classList.add('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.remove('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
+    } else {
+      btn.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.add('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
+    }
+  });
+}
+
+function syncViewerFilterUI() {
+  renderViewerSavedViews();
+  renderActiveFilterChips();
+  syncViewerShortcutButtons();
+  syncViewerDestinationUI();
+  syncViewerDrawerUI();
+}
+
 function syncBidProfileUI() {
   const goalEl = document.getElementById('target-credit');
   const daysEl = document.getElementById('target-days');
@@ -2120,10 +2531,9 @@ function syncBidProfileUI() {
       ? names.map(name => `<option value="${name}">${name}</option>`).join('')
       : '<option value="">No saved profiles</option>';
   }
-  renderFavoriteDestinations();
-  renderDestinationSuggestions();
   syncBidProfileModeButtons();
   syncDestinationModeButtons();
+  syncViewerFilterUI();
 }
 
 function syncBidProfileModeButtons() {
@@ -2164,6 +2574,20 @@ function updateBidProfileFromUI() {
   bidProfile.targetDays = isNaN(targetDays) ? 16 : targetDays;
 }
 
+function updateViewerDestinationFromUI() {
+  const code = normalizeAirportCode(document.getElementById('destination-code-input')?.value);
+  bidProfile.destinationCode = code;
+}
+
+function updateViewerQuickSettingsFromUI() {
+  viewerQuickSettings = {
+    lateStartAfter: document.getElementById('viewer-late-after')?.value || '10:00',
+    earlyFinishBefore: document.getElementById('viewer-early-before')?.value || '18:00',
+    longLayoverMin: document.getElementById('viewer-long-lay-min')?.value || '10',
+    fewLegsMax: document.getElementById('viewer-few-legs-max')?.value || '2'
+  };
+}
+
 function setMonthlyGoal(goal) {
   bidProfile.monthlyGoal = goal;
   bidMode = goal;
@@ -2196,6 +2620,44 @@ function toggleDestinationMode(mode) {
   if (bidTable) runBidBuilder(false);
 }
 
+function setViewerDestinationScope(scope) {
+  bidProfile.destinationScope = scope || 'all';
+  updateViewerDestinationFromUI();
+  syncViewerDestinationUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
+function applyDestinationCodeFilter() {
+  updateViewerDestinationFromUI();
+  syncViewerDestinationUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
+function applyDestinationSuggestion(code) {
+  const normalized = normalizeAirportCode(code);
+  if (!normalized) return;
+  bidProfile.destinationCode = normalized;
+  const region = getAirportRegion(normalized);
+  bidProfile.destinationScope = region === 'usa' || region === 'intl' ? region : 'all';
+  syncViewerDestinationUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
+function clearDestinationFilters() {
+  bidProfile.destinationScope = 'all';
+  bidProfile.destinationCode = '';
+  syncViewerDestinationUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
 function addFavoriteDestination(rawValue) {
   const input = typeof rawValue === 'string' ? rawValue : document.getElementById('favorite-dest-input')?.value;
   const code = normalizeAirportCode(input);
@@ -2213,17 +2675,6 @@ function addFavoriteDestination(rawValue) {
 function removeFavoriteDestination(code) {
   const normalized = normalizeAirportCode(code);
   bidProfile.favoriteDestinations = (bidProfile.favoriteDestinations || []).filter(d => normalizeAirportCode(d) !== normalized);
-  syncBidProfileUI();
-  saveData();
-  if (bidTable) runBidBuilder(false);
-}
-
-function toggleSuggestedDestination(code) {
-  const normalized = normalizeAirportCode(code);
-  const favs = new Set((bidProfile.favoriteDestinations || []).map(normalizeAirportCode).filter(Boolean));
-  if (favs.has(normalized)) favs.delete(normalized);
-  else favs.add(normalized);
-  bidProfile.favoriteDestinations = [...favs].sort();
   syncBidProfileUI();
   saveData();
   if (bidTable) runBidBuilder(false);
@@ -2283,29 +2734,92 @@ function setDestinationProfileHints() {
 }
 
 function clearQuickFilters() {
-  const ids = [
-    'filter-redeye',
-    'filter-lazy',
-    'filter-commutable',
-    'filter-deadhead',
-    'filter-weekday',
-    'filter-avoid-p-etops',
-    'filter-avoid-a-etops'
-  ];
-  ids.forEach(id => {
+  clearViewerFilters();
+}
+
+function clearViewerFilter(key) {
+  const clearValue = (id) => { const el = document.getElementById(id); if (el) el.value = ''; };
+  const clearChecked = (id) => { const el = document.getElementById(id); if (el) el.checked = false; };
+
+  if (key === 'search') clearValue('search-input');
+  else if (key === 'base') clearValue('filter-base');
+  else if (key === 'days') clearValue('filter-days');
+  else if (key === 'rptAfter') clearValue('filter-rpt-after');
+  else if (key === 'rlsBefore') clearValue('filter-rls-before');
+  else if (key === 'minLay') clearValue('filter-min-lay');
+  else if (key === 'maxLay') clearValue('filter-max-lay');
+  else if (key === 'maxLegs') clearValue('filter-max-legs');
+  else if (key === 'minCredit') clearValue('filter-min-credit');
+  else if (key === 'redeye') clearChecked('filter-redeye');
+  else if (key === 'lazy') clearChecked('filter-lazy');
+  else if (key === 'commutable') clearChecked('filter-commutable');
+  else if (key === 'deadhead') clearChecked('filter-deadhead');
+  else if (key === 'weekday') clearChecked('filter-weekday');
+  else if (key === 'noPEtops') clearChecked('filter-avoid-p-etops');
+  else if (key === 'noAEtops') clearChecked('filter-avoid-a-etops');
+  else if (key === 'destinationScope') bidProfile.destinationScope = 'all';
+  else if (key === 'destinationCode') bidProfile.destinationCode = '';
+
+  syncViewerFilterUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
+function clearViewerFilters() {
+  ['search-input','filter-base','filter-days','filter-rpt-after','filter-rls-before','filter-min-lay','filter-max-lay','filter-max-legs','filter-min-credit','destination-code-input','viewer-view-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-weekday','filter-avoid-p-etops','filter-avoid-a-etops'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.checked = false;
   });
-  const search = document.getElementById('search-input');
-  const base = document.getElementById('filter-base');
-  const days = document.getElementById('filter-days');
-  const rptAfter = document.getElementById('filter-rpt-after');
-  const rlsBefore = document.getElementById('filter-rls-before');
-  if (search) search.value = '';
-  if (base) base.value = '';
-  if (days) days.value = '';
-  if (rptAfter) rptAfter.value = '';
-  if (rlsBefore) rlsBefore.value = '';
+  bidProfile.destinationScope = 'all';
+  bidProfile.destinationCode = '';
+  syncViewerFilterUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
+function toggleViewerShortcut(kind) {
+  const setValue = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+  const toggleChecked = (id) => { const el = document.getElementById(id); if (!el) return; el.checked = !el.checked; };
+  updateViewerQuickSettingsFromUI();
+
+  if (kind === 'home') {
+    bidProfile.destinationScope = 'all';
+    bidProfile.destinationCode = bidProfile.destinationCode === 'YOW' ? '' : 'YOW';
+  } else if (kind === 'usa') {
+    bidProfile.destinationScope = bidProfile.destinationScope === 'usa' ? 'all' : 'usa';
+    if (bidProfile.destinationScope === 'usa') bidProfile.destinationCode = '';
+  } else if (kind === 'intl') {
+    bidProfile.destinationScope = bidProfile.destinationScope === 'intl' ? 'all' : 'intl';
+    if (bidProfile.destinationScope === 'intl') bidProfile.destinationCode = '';
+  } else if (kind === 'long') {
+    const el = document.getElementById('filter-min-lay');
+    if (el) el.value = el.value === viewerQuickSettings.longLayoverMin ? '' : viewerQuickSettings.longLayoverMin;
+  } else if (kind === 'late') {
+    setValue('filter-rpt-after', document.getElementById('filter-rpt-after')?.value === viewerQuickSettings.lateStartAfter ? '' : viewerQuickSettings.lateStartAfter);
+  } else if (kind === 'early') {
+    setValue('filter-rls-before', document.getElementById('filter-rls-before')?.value === viewerQuickSettings.earlyFinishBefore ? '' : viewerQuickSettings.earlyFinishBefore);
+  } else if (kind === 'fewlegs') {
+    setValue('filter-max-legs', document.getElementById('filter-max-legs')?.value === viewerQuickSettings.fewLegsMax ? '' : viewerQuickSettings.fewLegsMax);
+  } else if (kind === 'commutable') {
+    toggleChecked('filter-commutable');
+  } else if (kind === 'lazy') {
+    toggleChecked('filter-lazy');
+  } else if (kind === 'redeye') {
+    toggleChecked('filter-redeye');
+  } else if (kind === 'deadhead') {
+    toggleChecked('filter-deadhead');
+  }
+
+  syncViewerFilterUI();
+  saveData();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
 }
 
 function setQuickFilter(kind) {
@@ -2317,8 +2831,7 @@ function setQuickFilter(kind) {
   };
 
   if (kind === 'reset') {
-    clearQuickFilters();
-    applyFilters();
+    clearViewerFilters();
     return;
   }
 
@@ -2331,7 +2844,10 @@ function setQuickFilter(kind) {
       const nextValue = threshold ? threshold.toFixed(1) : '';
       creditInput.value = creditInput.value === nextValue ? '' : nextValue;
     }
+    syncViewerFilterUI();
+    saveData();
     applyFilters();
+    if (bidTable) runBidBuilder(false);
     return;
   }
 
@@ -2342,7 +2858,47 @@ function setQuickFilter(kind) {
   if (!target) return;
 
   target.checked = !target.checked;
+  syncViewerFilterUI();
+  saveData();
   applyFilters();
+  if (bidTable) runBidBuilder(false);
+}
+
+function saveViewerView() {
+  const name = (document.getElementById('viewer-view-name')?.value || '').trim();
+  if (!name) {
+    showToast('Enter a view name first', 'error');
+    return;
+  }
+  savedViewerViews[name] = getViewerFilterSnapshot();
+  syncViewerFilterUI();
+  saveData();
+  showToast(`Saved view "${name}"`);
+}
+
+function loadSelectedViewerView() {
+  const select = document.getElementById('viewer-view-select');
+  const name = select?.value;
+  const view = name ? savedViewerViews[name] : null;
+  if (!view) {
+    showToast('Select a saved view first', 'error');
+    return;
+  }
+  applyViewerFilterSnapshot(view);
+  showToast(`Loaded view "${name}"`);
+}
+
+function deleteSelectedViewerView() {
+  const select = document.getElementById('viewer-view-select');
+  const name = select?.value;
+  if (!name) {
+    showToast('Select a view to delete', 'error');
+    return;
+  }
+  delete savedViewerViews[name];
+  syncViewerFilterUI();
+  saveData();
+  showToast(`Deleted view "${name}"`);
 }
 
 function populateBaseFilter() {
@@ -2361,21 +2917,35 @@ function populateBaseFilter() {
 }
 
 function syncQuickFilterButtons() {
+  const snapshot = getViewerFilterSnapshot();
   const quickOn =
-    document.getElementById('filter-deadhead')?.checked ||
-    document.getElementById('filter-redeye')?.checked ||
-    document.getElementById('filter-lazy')?.checked ||
-    document.getElementById('filter-commutable')?.checked ||
-    !!document.getElementById('filter-min-credit')?.value;
+    snapshot.search ||
+    snapshot.base ||
+    snapshot.days ||
+    snapshot.rptAfter ||
+    snapshot.rlsBefore ||
+    snapshot.minLay ||
+    snapshot.maxLay ||
+    snapshot.maxLegs ||
+    snapshot.minCredit ||
+    snapshot.redeye ||
+    snapshot.lazy ||
+    snapshot.commutable ||
+    snapshot.deadhead ||
+    snapshot.weekday ||
+    snapshot.noPEtops ||
+    snapshot.noAEtops ||
+    snapshot.destinationScope !== 'all' ||
+    snapshot.destinationCode;
 
   document.querySelectorAll('.stat-card').forEach(btn => {
     const action = btn.dataset.statAction;
     const isActive =
-      (action === 'deadhead' && document.getElementById('filter-deadhead')?.checked) ||
-      (action === 'redeye' && document.getElementById('filter-redeye')?.checked) ||
-      (action === 'lazy' && document.getElementById('filter-lazy')?.checked) ||
-      (action === 'commutable' && document.getElementById('filter-commutable')?.checked) ||
-      (action === 'credit' && !!document.getElementById('filter-min-credit')?.value) ||
+      (action === 'deadhead' && snapshot.deadhead) ||
+      (action === 'redeye' && snapshot.redeye) ||
+      (action === 'lazy' && snapshot.lazy) ||
+      (action === 'commutable' && snapshot.commutable) ||
+      (action === 'credit' && !!snapshot.minCredit) ||
       (action === 'reset' && !quickOn);
 
     if (isActive) {
@@ -2404,6 +2974,7 @@ function renderPairingTable() {
       credit_per_day: p.credit_time_per_day,
       per_diem: p.correctedperdiem,
       legs: p.total_legs,
+      max_legs_per_day: p.max_legs_per_day || 0,
       layovers: p.layover_cities,
       longest_lay: p.longest_layover,
       redeye: p.is_redeye ? 'Yes' : '',
@@ -2478,6 +3049,10 @@ function renderPairingTable() {
   document.getElementById('filter-days').addEventListener('change', applyFilters);
   document.getElementById('filter-rpt-after').addEventListener('change', applyFilters);
   document.getElementById('filter-rls-before').addEventListener('change', applyFilters);
+  document.getElementById('filter-min-lay').addEventListener('change', applyFilters);
+  document.getElementById('filter-max-lay').addEventListener('change', applyFilters);
+  document.getElementById('filter-max-legs').addEventListener('change', applyFilters);
+  document.getElementById('filter-min-credit').addEventListener('change', applyFilters);
   ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-weekday',
    'filter-avoid-p-etops','filter-avoid-a-etops'].forEach(id => {
     document.getElementById(id).addEventListener('change', applyFilters);
@@ -2504,8 +3079,14 @@ function applyFilters() {
   const days = document.getElementById('filter-days').value;
   const rptAfter = document.getElementById('filter-rpt-after').value;
   const rlsBefore = document.getElementById('filter-rls-before').value;
+  const minLay = parseFloat(document.getElementById('filter-min-lay').value);
+  const maxLay = parseFloat(document.getElementById('filter-max-lay').value);
+  const maxLegs = parseFloat(document.getElementById('filter-max-legs').value);
+  const minCredit = parseFloat(document.getElementById('filter-min-credit').value);
   const avoidPEtops = document.getElementById('filter-avoid-p-etops').checked;
   const avoidAEtops = document.getElementById('filter-avoid-a-etops').checked;
+  const destinationScope = bidProfile.destinationScope || 'all';
+  const destinationCode = normalizeAirportCode(bidProfile.destinationCode);
 
   if (search) {
     pairingTable.addFilter((data, params) => {
@@ -2519,6 +3100,10 @@ function applyFilters() {
 
   if (base) pairingTable.addFilter('base', '=', base);
   if (days) pairingTable.addFilter('days', '=', parseInt(days));
+  if (!isNaN(minLay) && minLay > 0) pairingTable.addFilter('longest_lay', '>=', minLay);
+  if (!isNaN(maxLay) && maxLay > 0) pairingTable.addFilter('longest_lay', '<=', maxLay);
+  if (!isNaN(maxLegs) && maxLegs > 0) pairingTable.addFilter('max_legs_per_day', '<=', maxLegs);
+  if (!isNaN(minCredit) && minCredit > 0) pairingTable.addFilter('credit_hrs', '>=', minCredit);
   if (document.getElementById('filter-redeye').checked) pairingTable.addFilter('redeye', '=', 'Yes');
   if (document.getElementById('filter-lazy').checked) pairingTable.addFilter('lazy', '=', 'Yes');
   if (document.getElementById('filter-commutable').checked) pairingTable.addFilter('commutable', '=', 'Yes');
@@ -2526,6 +3111,12 @@ function applyFilters() {
   if (document.getElementById('filter-weekday').checked) pairingTable.addFilter('weekday', '=', 'Yes');
   if (avoidPEtops) pairingTable.addFilter('p_etops', '!=', 'Yes');
   if (avoidAEtops) pairingTable.addFilter('a_etops', '!=', 'Yes');
+  if (destinationScope !== 'all' || destinationCode) {
+    pairingTable.addFilter((data, params) => pairingMatchesDestinationFilter(data._raw, params.scope, params.code), {
+      scope: destinationScope,
+      code: destinationCode
+    });
+  }
 
   const rptMins = timeInputToMins(rptAfter);
   if (!isNaN(rptMins)) pairingTable.addFilter((data, p) => data.report_mins === 0 || data.report_mins >= p.m, {m: rptMins});
@@ -2533,6 +3124,7 @@ function applyFilters() {
   const rlsMins = timeInputToMins(rlsBefore);
   if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.release_mins === 0 || data.release_mins <= p.m, {m: rlsMins});
   syncQuickFilterButtons();
+  syncDestinationSummary();
 }
 
 // =====================================================================
@@ -2802,13 +3394,18 @@ function scorePairing(p) {
 function getEligiblePairings() {
   const minLay = parseFloat(document.getElementById('filter-min-lay').value);
   const maxLay = parseFloat(document.getElementById('filter-max-lay').value);
+  const maxLegs = parseFloat(document.getElementById('filter-max-legs').value);
   const minCredit = parseFloat(document.getElementById('filter-min-credit').value);
+  const destinationScope = bidProfile.destinationScope || 'all';
+  const destinationCode = normalizeAirportCode(bidProfile.destinationCode);
 
   return allPairings.filter(p => {
     if (gdoDays.size > 0 && (p.all_dates||[]).some(d => gdoDays.has(d))) return false;
     if (!isNaN(minLay) && minLay > 0 && (p.longest_layover || 0) < minLay) return false;
     if (!isNaN(maxLay) && maxLay > 0 && (p.longest_layover || 0) > maxLay) return false;
+    if (!isNaN(maxLegs) && maxLegs > 0 && (p.max_legs_per_day || 0) > maxLegs) return false;
     if (!isNaN(minCredit) && minCredit > 0 && (p.correctedcredit || 0) < minCredit) return false;
+    if ((destinationScope !== 'all' || destinationCode) && !pairingMatchesDestinationFilter(p, destinationScope, destinationCode)) return false;
     return true;
   });
 }
@@ -3012,6 +3609,7 @@ function runBidBuilder(autoFill = false) {
     pairing: p.pairing_number,
     date: (p.operating_dates && p.operating_dates.length > 0) ? p.operating_dates[0] : '',
     days: p.days_of_work,
+    max_legs_per_day: p.max_legs_per_day || 0,
     tafb: p.tafb || '',
     credit: p.credit_time || '',
     credit_hrs: Math.round((p.correctedcredit||0)*10)/10,
