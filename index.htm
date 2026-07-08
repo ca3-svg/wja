@@ -301,7 +301,7 @@
 
     <!-- Viewer Layout -->
     <div class="flex flex-col xl:flex-row gap-4 min-h-0">
-      <aside id="viewer-drawer" class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-sm sticky top-16 z-30 w-full xl:w-[360px] shrink-0 transition-all duration-200 xl:max-h-[calc(100vh-5rem)] xl:overflow-hidden">
+      <aside id="viewer-drawer" class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-sm sticky top-16 z-30 w-full xl:w-[360px] shrink-0 transition-all duration-200 xl:h-[calc(100vh-5rem)] xl:flex xl:flex-col xl:overflow-hidden">
         <div class="flex items-center justify-between gap-3 p-3 border-b border-slate-200 dark:border-dark-700">
           <div class="min-w-0">
             <div class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -313,7 +313,7 @@
             <i data-lucide="panel-left-close" class="w-3.5 h-3.5"></i>
           </button>
         </div>
-        <div id="viewer-drawer-body" class="p-3 flex flex-col gap-3 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto custom-scrollbar">
+        <div id="viewer-drawer-body" class="p-3 flex flex-col gap-3 xl:flex-1 xl:min-h-0 xl:overflow-y-auto custom-scrollbar">
           <div class="flex flex-wrap items-start justify-start gap-2">
             <div class="flex items-center gap-2">
               <input type="text" id="viewer-view-name" class="input-base py-1.5 px-2 text-xs w-32" placeholder="Save view">
@@ -2166,6 +2166,7 @@ function renderStats() {
   const lazy = allPairings.filter(p => p.is_lazy_pairing).length;
   const commutable = allPairings.filter(p => p.is_commutable).length;
   const dh = allPairings.filter(p => p.has_deadhead).length;
+  const favorites = favoritePairingKeys.length;
   const avgCredit = total ? (allPairings.reduce((s,p) => s + (p.correctedcredit||0), 0) / total).toFixed(1) : 0;
   
   const StatCard = (label, val, icon, colorKey, action = '') => {
@@ -2200,6 +2201,7 @@ function renderStats() {
     ${StatCard('Lazy Trips', lazy, 'coffee', 'amber', 'lazy')}
     ${StatCard('Redeyes', redeyes, 'moon', 'purple', 'redeye')}
     ${StatCard('Deadheads', dh, 'users', 'rose', 'deadhead')}
+    ${StatCard('Favorites', favorites, 'star', 'amber', 'favoritesOnly')}
   `;
   lucide.createIcons();
   syncQuickFilterButtons();
