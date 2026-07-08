@@ -332,43 +332,7 @@
 
           <div id="active-filter-chip-rail" class="flex flex-wrap gap-2"></div>
 
-          <div class="grid grid-cols-2 gap-2" id="viewer-filter-shortcuts">
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="home" onclick="toggleViewerShortcut('home')">YOW home</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="usa" onclick="toggleViewerShortcut('usa')">USA layovers</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="intl" onclick="toggleViewerShortcut('intl')">International</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="long" onclick="toggleViewerShortcut('long')">Long layovers</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="late" onclick="toggleViewerShortcut('late')">Late start</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="early" onclick="toggleViewerShortcut('early')">Early finish</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="fewlegs" onclick="toggleViewerShortcut('fewlegs')">Few legs</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="commutable" onclick="toggleViewerShortcut('commutable')">Commutable</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="lazy" onclick="toggleViewerShortcut('lazy')">Lazy</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="redeye" onclick="toggleViewerShortcut('redeye')">Redeye</button>
-            <button class="px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap" data-shortcut="deadhead" onclick="toggleViewerShortcut('deadhead')">Deadhead</button>
-          </div>
-
-          <div class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-3">
-            <div class="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-              <i data-lucide="settings-2" class="w-4 h-4 text-brand-500"></i> Shortcut settings
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="text-[11px] text-slate-500 dark:text-slate-400">
-                Late start after
-                <input type="time" id="viewer-late-after" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
-              </label>
-              <label class="text-[11px] text-slate-500 dark:text-slate-400">
-                Early finish before
-                <input type="time" id="viewer-early-before" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
-              </label>
-              <label class="text-[11px] text-slate-500 dark:text-slate-400">
-                Long layover min
-                <input type="number" id="viewer-long-lay-min" min="0" step="0.5" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
-              </label>
-              <label class="text-[11px] text-slate-500 dark:text-slate-400">
-                Few legs max
-                <input type="number" id="viewer-few-legs-max" min="0" step="1" class="input-base mt-1 w-full py-1 px-2 text-xs" onchange="updateViewerQuickSettingsFromUI(); saveData(); syncViewerFilterUI()">
-              </label>
-            </div>
-          </div>
+          <div id="viewer-preference-list" class="space-y-2"></div>
 
           <details class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl">
             <summary class="p-3 font-medium text-slate-700 dark:text-slate-300 cursor-pointer flex justify-between items-center">
@@ -491,6 +455,30 @@
       <div id="viewer-content" class="flex-1 min-w-0">
         <!-- Table Container -->
         <div id="pairing-table" class="w-full text-sm flex-1"></div>
+      </div>
+    </div>
+
+    <div id="preference-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[130] flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-2xl w-full max-w-md p-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 id="preference-modal-title" class="text-lg font-bold text-slate-900 dark:text-white">Preference</h3>
+            <p id="preference-modal-desc" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
+          </div>
+          <button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" onclick="closePreferenceModal()">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="space-y-3">
+          <label class="text-xs text-slate-500 dark:text-slate-400 block">
+            Value
+            <input id="preference-modal-value" type="text" class="input-base mt-1 w-full py-2 px-3 text-sm">
+          </label>
+          <div class="flex justify-end gap-2">
+            <button class="btn-base btn-secondary !py-2 !px-3 !text-xs" onclick="closePreferenceModal()">Cancel</button>
+            <button class="btn-base btn-primary !py-2 !px-3 !text-xs" onclick="savePreferenceModal()">Save</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1333,9 +1321,11 @@ let viewerQuickSettings = {
   lateStartAfter: '10:00',
   earlyFinishBefore: '18:00',
   longLayoverMin: '10',
-  fewLegsMax: '2'
+  fewLegsMax: '2',
+  avgLayoverMin: ''
 };
 let viewerDrawerCollapsed = false;
+let activePreferenceEdit = null;
 
 // Sourced from user/app state (currently mock defaults until Reserve UI is built)
 let pilotState = {
@@ -1399,7 +1389,8 @@ function loadData() {
         lateStartAfter: data.viewerQuickSettings?.lateStartAfter || '10:00',
         earlyFinishBefore: data.viewerQuickSettings?.earlyFinishBefore || '18:00',
         longLayoverMin: data.viewerQuickSettings?.longLayoverMin || '10',
-        fewLegsMax: data.viewerQuickSettings?.fewLegsMax || '2'
+        fewLegsMax: data.viewerQuickSettings?.fewLegsMax || '2',
+        avgLayoverMin: data.viewerQuickSettings?.avgLayoverMin || ''
       };
       viewerDrawerCollapsed = !!data.viewerDrawerCollapsed;
 
@@ -1850,6 +1841,25 @@ function parseTripBlock(block) {
   for (const lay of trip.layovers) {
     const mins = timeStrToMinutes(lay.duration);
     if (!isNaN(mins) && mins/60 > trip.longest_layover) trip.longest_layover = Math.round(mins/60*100)/100;
+  }
+
+  trip.average_layover = 0;
+  const layoverMinutes = trip.layovers
+    .map(l => timeStrToMinutes(l.duration))
+    .filter(m => !isNaN(m) && m > 0);
+  if (layoverMinutes.length) {
+    trip.average_layover = Math.round((layoverMinutes.reduce((s, m) => s + m, 0) / layoverMinutes.length) / 60 * 100) / 100;
+  }
+
+  trip.first_leg_departure_mins = 0;
+  trip.last_leg_arrival_mins = 0;
+  if (sortedDays.length) {
+    const firstDayLegs = trip.days[String(sortedDays[0])] || [];
+    const lastDayLegs = trip.days[String(sortedDays[sortedDays.length - 1])] || [];
+    const firstLeg = firstDayLegs[0];
+    const lastLeg = lastDayLegs[lastDayLegs.length - 1];
+    if (firstLeg?.dep_time) trip.first_leg_departure_mins = timeStrToMinutes(firstLeg.dep_time);
+    if (lastLeg?.arr_time) trip.last_leg_arrival_mins = timeStrToMinutes(lastLeg.arr_time);
   }
 
   trip.days_of_work = sortedDays.length ? sortedDays[sortedDays.length-1] : 0;
@@ -2350,10 +2360,6 @@ function syncViewerDestinationUI() {
 function syncViewerDrawerUI() {
   const drawer = document.getElementById('viewer-drawer');
   const toggleBtn = drawer?.querySelector('button[title="Collapse drawer"]');
-  const late = document.getElementById('viewer-late-after');
-  const early = document.getElementById('viewer-early-before');
-  const longLay = document.getElementById('viewer-long-lay-min');
-  const fewLegs = document.getElementById('viewer-few-legs-max');
 
   if (drawer) {
     drawer.classList.toggle('viewer-drawer-collapsed', !!viewerDrawerCollapsed);
@@ -2364,10 +2370,8 @@ function syncViewerDrawerUI() {
       ? '<i data-lucide="panel-left-open" class="w-3.5 h-3.5"></i>'
       : '<i data-lucide="panel-left-close" class="w-3.5 h-3.5"></i>';
   }
-  if (late) late.value = viewerQuickSettings.lateStartAfter || '10:00';
-  if (early) early.value = viewerQuickSettings.earlyFinishBefore || '18:00';
-  if (longLay) longLay.value = viewerQuickSettings.longLayoverMin || '10';
-  if (fewLegs) fewLegs.value = viewerQuickSettings.fewLegsMax || '2';
+  renderViewerPreferences();
+  if (activePreferenceEdit) syncPreferenceModal(activePreferenceEdit);
   lucide.createIcons();
 }
 
@@ -2375,6 +2379,92 @@ function toggleViewerDrawer() {
   viewerDrawerCollapsed = !viewerDrawerCollapsed;
   syncViewerFilterUI();
   saveData();
+}
+
+function renderViewerPreferences() {
+  const host = document.getElementById('viewer-preference-list');
+  if (!host) return;
+  const items = [
+    { key: 'home', label: 'YOW home layover', desc: 'Pinned home destination for Ottawa layovers', value: 'YOW' },
+    { key: 'usa', label: 'USA layovers', desc: 'Prefer pairings with U.S. layovers', value: 'scope' },
+    { key: 'intl', label: 'International layovers', desc: 'Prefer pairings outside Canada and the USA', value: 'scope' },
+    { key: 'late', label: 'Late start', desc: 'First leg departure must be at or after this time', value: viewerQuickSettings.lateStartAfter || '10:00' },
+    { key: 'early', label: 'Early finish', desc: 'Last leg arrival must be at or before this time', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
+    { key: 'long', label: 'Long layover', desc: 'Minimum layover length to keep a pairing in view', value: `${viewerQuickSettings.longLayoverMin || '10'}h` },
+    { key: 'avg', label: 'Average layover', desc: 'Average layover across the pairing must be at least this much', value: viewerQuickSettings.avgLayoverMin ? `${viewerQuickSettings.avgLayoverMin}h` : 'unset' },
+    { key: 'fewlegs', label: 'Few legs', desc: 'Maximum legs per day for a pairing', value: viewerQuickSettings.fewLegsMax || '2' },
+    { key: 'commutable', label: 'Commutable', desc: 'Quick toggle for commutable pairings', value: '' },
+    { key: 'lazy', label: 'Lazy pairing', desc: 'Quick toggle for relaxed pairings', value: '' },
+    { key: 'redeye', label: 'Redeye', desc: 'Quick toggle for red-eye pairings', value: '' },
+    { key: 'deadhead', label: 'Deadhead', desc: 'Quick toggle for deadhead pairings', value: '' }
+  ];
+
+  host.innerHTML = items.map(item => `
+    <div class="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-dark-700 bg-slate-50 dark:bg-dark-900 px-3 py-2 shadow-sm">
+      <button type="button" class="flex-1 min-w-0 flex items-center gap-3 text-left" onclick="${item.key === 'home' ? `toggleViewerShortcut('home')` : (['late','early','long','avg','fewlegs'].includes(item.key) ? `openPreferenceModal('${item.key}')` : `toggleViewerShortcut('${item.key}')`)}">
+        <span class="min-w-0 flex-1">
+          <span class="block text-xs font-semibold text-slate-700 dark:text-slate-200">${item.label}</span>
+          <span class="block text-[11px] leading-4 text-slate-500 dark:text-slate-400 truncate">${item.desc}</span>
+        </span>
+        ${item.value ? `<span class="shrink-0 inline-flex items-center rounded-full border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-300">${escapeHtml(item.value)}</span>` : ''}
+        ${item.key === 'home' ? '' : '<i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>'}
+      </button>
+      ${item.key === 'home' ? '' : `<button type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800" title="Edit ${item.label}" onclick="openPreferenceModal('${item.key}')"><i data-lucide="settings-2" class="w-3.5 h-3.5"></i></button>`}
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+function syncPreferenceModal(kind) {
+  activePreferenceEdit = kind;
+  const modal = document.getElementById('preference-modal');
+  const title = document.getElementById('preference-modal-title');
+  const desc = document.getElementById('preference-modal-desc');
+  const value = document.getElementById('preference-modal-value');
+  if (!modal || !title || !desc || !value) return;
+
+  const defs = {
+    late: { title: 'Late start after', desc: 'Pairings must start at or after this first-leg departure time.', value: viewerQuickSettings.lateStartAfter || '10:00' },
+    early: { title: 'Early finish before', desc: 'Pairings must finish at or before this last-leg arrival time.', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
+    long: { title: 'Long layover minimum', desc: 'Keep pairings with at least this layover length in hours.', value: viewerQuickSettings.longLayoverMin || '10' },
+    avg: { title: 'Average layover minimum', desc: 'Keep pairings whose average layover is at least this many hours.', value: viewerQuickSettings.avgLayoverMin || '' },
+    fewlegs: { title: 'Few legs maximum', desc: 'Keep pairings that do not exceed this many legs per day.', value: viewerQuickSettings.fewLegsMax || '2' },
+    home: { title: 'YOW home preference', desc: 'This pins YOW layovers as your home preference.', value: 'YOW' }
+  };
+  const cfg = defs[kind] || defs.late;
+  title.textContent = cfg.title;
+  desc.textContent = cfg.desc;
+  value.value = cfg.value;
+  value.type = kind === 'late' || kind === 'early' ? 'time' : (kind === 'long' || kind === 'avg' || kind === 'fewlegs' ? 'number' : 'text');
+  value.step = (kind === 'long' || kind === 'avg' || kind === 'fewlegs') ? '0.5' : '1';
+  value.min = (kind === 'long' || kind === 'avg' || kind === 'fewlegs') ? '0' : '';
+  modal.classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function openPreferenceModal(kind) {
+  syncPreferenceModal(kind);
+}
+
+function closePreferenceModal() {
+  const modal = document.getElementById('preference-modal');
+  if (modal) modal.classList.add('hidden');
+  activePreferenceEdit = null;
+  syncViewerFilterUI();
+}
+
+function savePreferenceModal() {
+  const value = (document.getElementById('preference-modal-value')?.value || '').trim();
+  if (!activePreferenceEdit) return closePreferenceModal();
+  if (activePreferenceEdit === 'late') viewerQuickSettings.lateStartAfter = value || '10:00';
+  else if (activePreferenceEdit === 'early') viewerQuickSettings.earlyFinishBefore = value || '18:00';
+  else if (activePreferenceEdit === 'long') viewerQuickSettings.longLayoverMin = value || '10';
+  else if (activePreferenceEdit === 'avg') viewerQuickSettings.avgLayoverMin = value || '';
+  else if (activePreferenceEdit === 'fewlegs') viewerQuickSettings.fewLegsMax = value || '2';
+  saveData();
+  closePreferenceModal();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
 }
 
 function getViewerFilterSnapshot() {
@@ -2388,6 +2478,7 @@ function getViewerFilterSnapshot() {
     maxLay: document.getElementById('filter-max-lay')?.value || '',
     maxLegs: document.getElementById('filter-max-legs')?.value || '',
     minCredit: document.getElementById('filter-min-credit')?.value || '',
+    avgLayoverMin: viewerQuickSettings.avgLayoverMin || '',
     redeye: !!document.getElementById('filter-redeye')?.checked,
     lazy: !!document.getElementById('filter-lazy')?.checked,
     commutable: !!document.getElementById('filter-commutable')?.checked,
@@ -2398,10 +2489,7 @@ function getViewerFilterSnapshot() {
     destinationScope: bidProfile.destinationScope || 'all',
     destinationCode: normalizeAirportCode(bidProfile.destinationCode),
     viewerQuickSettings: {
-      lateStartAfter: document.getElementById('viewer-late-after')?.value || viewerQuickSettings.lateStartAfter || '10:00',
-      earlyFinishBefore: document.getElementById('viewer-early-before')?.value || viewerQuickSettings.earlyFinishBefore || '18:00',
-      longLayoverMin: document.getElementById('viewer-long-lay-min')?.value || viewerQuickSettings.longLayoverMin || '10',
-      fewLegsMax: document.getElementById('viewer-few-legs-max')?.value || viewerQuickSettings.fewLegsMax || '2'
+      ...viewerQuickSettings
     }
   };
 }
@@ -2432,7 +2520,8 @@ function applyViewerFilterSnapshot(snapshot = {}) {
     lateStartAfter: snapshot.viewerQuickSettings?.lateStartAfter || '10:00',
     earlyFinishBefore: snapshot.viewerQuickSettings?.earlyFinishBefore || '18:00',
     longLayoverMin: snapshot.viewerQuickSettings?.longLayoverMin || '10',
-    fewLegsMax: snapshot.viewerQuickSettings?.fewLegsMax || '2'
+    fewLegsMax: snapshot.viewerQuickSettings?.fewLegsMax || '2',
+    avgLayoverMin: snapshot.viewerQuickSettings?.avgLayoverMin || ''
   };
   syncViewerFilterUI();
   saveData();
@@ -2465,6 +2554,7 @@ function renderActiveFilterChips() {
   if (snapshot.maxLay) addChip(`Max lay ${escapeHtml(snapshot.maxLay)}h`, 'maxLay');
   if (snapshot.maxLegs) addChip(`Max legs/day ${escapeHtml(snapshot.maxLegs)}`, 'maxLegs');
   if (snapshot.minCredit) addChip(`Min credit ${escapeHtml(snapshot.minCredit)}h`, 'minCredit');
+  if (snapshot.avgLayoverMin) addChip(`Avg lay ${escapeHtml(snapshot.avgLayoverMin)}h+`, 'avgLayoverMin');
   if (snapshot.redeye) addChip('Redeye', 'redeye');
   if (snapshot.lazy) addChip('Lazy', 'lazy');
   if (snapshot.commutable) addChip('Commutable', 'commutable');
@@ -2481,37 +2571,9 @@ function renderActiveFilterChips() {
   lucide.createIcons();
 }
 
-function syncViewerShortcutButtons() {
-  const snapshot = getViewerFilterSnapshot();
-  document.querySelectorAll('#viewer-filter-shortcuts [data-shortcut]').forEach(btn => {
-    const key = btn.dataset.shortcut;
-    const active =
-      (key === 'home' && snapshot.destinationCode === 'YOW') ||
-      (key === 'usa' && snapshot.destinationScope === 'usa') ||
-      (key === 'intl' && snapshot.destinationScope === 'intl') ||
-      (key === 'long' && snapshot.minLay === (viewerQuickSettings.longLayoverMin || '10')) ||
-      (key === 'late' && snapshot.rptAfter === (viewerQuickSettings.lateStartAfter || '10:00')) ||
-      (key === 'early' && snapshot.rlsBefore === (viewerQuickSettings.earlyFinishBefore || '18:00')) ||
-      (key === 'fewlegs' && snapshot.maxLegs === (viewerQuickSettings.fewLegsMax || '2')) ||
-      (key === 'commutable' && snapshot.commutable) ||
-      (key === 'lazy' && snapshot.lazy) ||
-      (key === 'redeye' && snapshot.redeye) ||
-      (key === 'deadhead' && snapshot.deadhead);
-
-    if (active) {
-      btn.classList.add('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
-      btn.classList.remove('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
-    } else {
-      btn.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
-      btn.classList.add('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
-    }
-  });
-}
-
 function syncViewerFilterUI() {
   renderViewerSavedViews();
   renderActiveFilterChips();
-  syncViewerShortcutButtons();
   syncViewerDestinationUI();
   syncViewerDrawerUI();
 }
@@ -2580,12 +2642,19 @@ function updateViewerDestinationFromUI() {
 }
 
 function updateViewerQuickSettingsFromUI() {
-  viewerQuickSettings = {
-    lateStartAfter: document.getElementById('viewer-late-after')?.value || '10:00',
-    earlyFinishBefore: document.getElementById('viewer-early-before')?.value || '18:00',
-    longLayoverMin: document.getElementById('viewer-long-lay-min')?.value || '10',
-    fewLegsMax: document.getElementById('viewer-few-legs-max')?.value || '2'
-  };
+  const next = { ...viewerQuickSettings };
+  const late = document.getElementById('viewer-late-after');
+  const early = document.getElementById('viewer-early-before');
+  const longLay = document.getElementById('viewer-long-lay-min');
+  const fewLegs = document.getElementById('viewer-few-legs-max');
+  const avgLay = document.getElementById('viewer-avg-lay-min');
+
+  if (late) next.lateStartAfter = late.value || next.lateStartAfter;
+  if (early) next.earlyFinishBefore = early.value || next.earlyFinishBefore;
+  if (longLay) next.longLayoverMin = longLay.value || next.longLayoverMin;
+  if (fewLegs) next.fewLegsMax = fewLegs.value || next.fewLegsMax;
+  if (avgLay) next.avgLayoverMin = avgLay.value || next.avgLayoverMin;
+  viewerQuickSettings = next;
 }
 
 function setMonthlyGoal(goal) {
@@ -2750,6 +2819,7 @@ function clearViewerFilter(key) {
   else if (key === 'maxLay') clearValue('filter-max-lay');
   else if (key === 'maxLegs') clearValue('filter-max-legs');
   else if (key === 'minCredit') clearValue('filter-min-credit');
+  else if (key === 'avgLayoverMin') viewerQuickSettings.avgLayoverMin = '';
   else if (key === 'redeye') clearChecked('filter-redeye');
   else if (key === 'lazy') clearChecked('filter-lazy');
   else if (key === 'commutable') clearChecked('filter-commutable');
@@ -2777,6 +2847,7 @@ function clearViewerFilters() {
   });
   bidProfile.destinationScope = 'all';
   bidProfile.destinationCode = '';
+  viewerQuickSettings.avgLayoverMin = '';
   syncViewerFilterUI();
   saveData();
   applyFilters();
@@ -2977,6 +3048,9 @@ function renderPairingTable() {
       max_legs_per_day: p.max_legs_per_day || 0,
       layovers: p.layover_cities,
       longest_lay: p.longest_layover,
+      average_lay: p.average_layover || 0,
+      first_leg_departure_mins: p.first_leg_departure_mins || 0,
+      last_leg_arrival_mins: p.last_leg_arrival_mins || 0,
       redeye: p.is_redeye ? 'Yes' : '',
       lazy: p.is_lazy_pairing ? 'Yes' : '',
       commutable: p.is_commutable ? 'Yes' : '',
@@ -3083,6 +3157,7 @@ function applyFilters() {
   const maxLay = parseFloat(document.getElementById('filter-max-lay').value);
   const maxLegs = parseFloat(document.getElementById('filter-max-legs').value);
   const minCredit = parseFloat(document.getElementById('filter-min-credit').value);
+  const avgLayoverMin = parseFloat(viewerQuickSettings.avgLayoverMin);
   const avoidPEtops = document.getElementById('filter-avoid-p-etops').checked;
   const avoidAEtops = document.getElementById('filter-avoid-a-etops').checked;
   const destinationScope = bidProfile.destinationScope || 'all';
@@ -3119,10 +3194,11 @@ function applyFilters() {
   }
 
   const rptMins = timeInputToMins(rptAfter);
-  if (!isNaN(rptMins)) pairingTable.addFilter((data, p) => data.report_mins === 0 || data.report_mins >= p.m, {m: rptMins});
+  if (!isNaN(rptMins)) pairingTable.addFilter((data, p) => data.first_leg_departure_mins === 0 || data.first_leg_departure_mins >= p.m, {m: rptMins});
 
   const rlsMins = timeInputToMins(rlsBefore);
-  if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.release_mins === 0 || data.release_mins <= p.m, {m: rlsMins});
+  if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.last_leg_arrival_mins === 0 || data.last_leg_arrival_mins <= p.m, {m: rlsMins});
+  if (!isNaN(avgLayoverMin) && avgLayoverMin > 0) pairingTable.addFilter('average_lay', '>=', avgLayoverMin);
   syncQuickFilterButtons();
   syncDestinationSummary();
 }
@@ -3323,8 +3399,9 @@ function scorePairing(p) {
   const stations = extractPairingStations(p);
   const matchesFav = [...stations].some(code => favs.has(normalizeAirportCode(code)));
   const hasYowLayover = (p.layovers || []).some(l => normalizeAirportCode(l.location) === 'YOW');
-  const startMins = p.report_minutes || timeStrToMinutes(p.report_time || '');
-  const releaseMins = p.release_minutes || timeStrToMinutes(p.release_time || '');
+  const startMins = p.first_leg_departure_mins || p.report_minutes || timeStrToMinutes(p.report_time || '');
+  const releaseMins = p.last_leg_arrival_mins || p.release_minutes || timeStrToMinutes(p.release_time || '');
+  const avgLayover = p.average_layover || 0;
 
   const efficiency = tafbH > 0 ? creditH / tafbH : 0;
   score += efficiency * (w.credit * 25); 
@@ -3365,6 +3442,11 @@ function scorePairing(p) {
     }
   }
 
+  if (avgLayover > 0) {
+    if (avgLayover >= Number(viewerQuickSettings.avgLayoverMin || 0)) score += 12;
+    if (avgLayover >= 12) score += 8;
+  }
+
   score -= (p.total_legs || 0) * 0.5;
   score -= Math.max(0, ((p.days_of_work || 0) / 2) - 1) * 1.5;
 
@@ -3396,6 +3478,7 @@ function getEligiblePairings() {
   const maxLay = parseFloat(document.getElementById('filter-max-lay').value);
   const maxLegs = parseFloat(document.getElementById('filter-max-legs').value);
   const minCredit = parseFloat(document.getElementById('filter-min-credit').value);
+  const avgLayoverMin = parseFloat(viewerQuickSettings.avgLayoverMin);
   const destinationScope = bidProfile.destinationScope || 'all';
   const destinationCode = normalizeAirportCode(bidProfile.destinationCode);
 
@@ -3405,6 +3488,7 @@ function getEligiblePairings() {
     if (!isNaN(maxLay) && maxLay > 0 && (p.longest_layover || 0) > maxLay) return false;
     if (!isNaN(maxLegs) && maxLegs > 0 && (p.max_legs_per_day || 0) > maxLegs) return false;
     if (!isNaN(minCredit) && minCredit > 0 && (p.correctedcredit || 0) < minCredit) return false;
+    if (!isNaN(avgLayoverMin) && avgLayoverMin > 0 && (p.average_layover || 0) < avgLayoverMin) return false;
     if ((destinationScope !== 'all' || destinationCode) && !pairingMatchesDestinationFilter(p, destinationScope, destinationCode)) return false;
     return true;
   });
