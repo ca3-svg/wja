@@ -1,0 +1,3173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WestJet Bid Builder Pro</title>
+
+<!-- External Libraries -->
+<link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+<script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!-- Tailwind Configuration -->
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          brand: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' },
+          dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155', 600: '#475569' }
+        },
+        fontFamily: {
+          sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          mono: ['JetBrains Mono', 'Courier New', 'monospace']
+        }
+      }
+    }
+  }
+</script>
+
+<script>
+  // Apply theme early to prevent flash
+  if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+</script>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background-color: #f1f5f9; border-radius: 0.5rem; }
+  .dark .custom-scrollbar::-webkit-scrollbar-track { background-color: #1e293b; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 0.5rem; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #334155; }
+
+  /* Custom UI Components mapped to standard CSS to prevent Tailwind CDN compilation issues */
+  .input-base { background-color: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none; transition: all 0.2s; }
+  .dark .input-base { background-color: #0f172a; border-color: #334155; color: #e2e8f0; }
+  .input-base:focus { border-color: #0ea5e9; box-shadow: 0 0 0 1px #0ea5e9; }
+
+  .btn-base { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; outline: none; cursor: pointer; }
+  .btn-primary { background-color: #0ea5e9; color: #ffffff; border: none; }
+  .btn-primary:hover { background-color: #0284c7; }
+  .btn-secondary { background-color: #ffffff; color: #334155; border: 1px solid #cbd5e1; }
+  .dark .btn-secondary { background-color: #1e293b; color: #e2e8f0; border-color: #334155; }
+  .btn-secondary:hover { background-color: #f8fafc; }
+  .dark .btn-secondary:hover { background-color: #334155; }
+  .btn-success { background-color: #10b981; color: #ffffff; border: none; }
+  .btn-success:hover { background-color: #059669; }
+
+  .upload-zone { border: 2px dashed #cbd5e1; border-radius: 1rem; padding: 3rem; text-align: center; cursor: pointer; transition: all 0.2s; background-color: #f8fafc; }
+  .dark .upload-zone { border-color: #475569; background-color: rgba(30, 41, 59, 0.5); }
+  .upload-zone:hover, .upload-zone.dragover { border-color: #0ea5e9; background-color: rgba(14, 165, 233, 0.05); }
+
+  .badge-p { display: inline-flex; align-items: center; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 700; background-color: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+  .dark .badge-p { background-color: rgba(168, 85, 247, 0.2); color: #c084fc; border-color: rgba(168, 85, 247, 0.3); }
+
+  .badge-a { display: inline-flex; align-items: center; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 700; background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+  .dark .badge-a { background-color: rgba(59, 130, 246, 0.2); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3); }
+
+  .cal-day { aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; user-select: none; border: 1px solid transparent; }
+  .cal-day:hover { background-color: #f1f5f9; }
+  .dark .cal-day:hover { background-color: #334155; }
+  .cal-day.empty { cursor: default; }
+  .cal-day.empty:hover { background-color: transparent; }
+  .cal-day.gdo { background-color: #10b981; color: #ffffff; font-weight: 700; border-color: #34d399; box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+  .cal-day.conflict { background-color: #ef4444; color: #ffffff; font-weight: 700; opacity: 0.8; }
+  .cal-day.pairing-day { background-color: #f0f9ff; border-color: #bae6fd; color: #0284c7; font-weight: 500; }
+  .dark .cal-day.pairing-day { background-color: rgba(14, 165, 233, 0.1); border-color: rgba(14, 165, 233, 0.3); color: #38bdf8; }
+  .cal-day.today { box-shadow: inset 0 0 0 2px #f59e0b; }
+
+  .bid-item.dragging { opacity: 0.5; transform: scale(0.98); border-color: #0ea5e9; }
+  
+  /* Collapsible Panel Markers */
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  
+  /* Tabulator Overrides - Plain CSS */
+  .tabulator { border: 1px solid #e2e8f0 !important; border-radius: 0.75rem !important; overflow: hidden !important; background-color: #ffffff !important; font-family: inherit !important; }
+  .dark .tabulator { border-color: #334155 !important; background-color: #1e293b !important; }
+  .tabulator .tabulator-header { background-color: #f8fafc !important; border-bottom: 1px solid #e2e8f0 !important; color: #334155 !important; font-weight: 600 !important; }
+  .dark .tabulator .tabulator-header { background-color: #1e293b !important; border-bottom-color: #334155 !important; color: #cbd5e1 !important; }
+  .tabulator .tabulator-row { background-color: #ffffff !important; border-bottom: 1px solid #f1f5f9 !important; color: #334155 !important; transition: background-color 0.2s; }
+  .dark .tabulator .tabulator-row { background-color: #0f172a !important; border-bottom-color: #1e293b !important; color: #cbd5e1 !important; }
+  .tabulator .tabulator-row:hover { background-color: #f8fafc !important; }
+  .dark .tabulator .tabulator-row:hover { background-color: #1e293b !important; }
+  .tabulator .tabulator-row.tabulator-row-even { background-color: #ffffff !important; }
+  .dark .tabulator .tabulator-row.tabulator-row-even { background-color: #0f172a !important; }
+  .tabulator .tabulator-header-filter input,
+  .tabulator .tabulator-header-filter select { background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; color: #334155 !important; border-radius: 0.375rem !important; font-size: 0.75rem !important; padding: 0.25rem 0.5rem !important; width: 100% !important; outline: none !important; transition: all 0.2s !important; }
+  .dark .tabulator .tabulator-header-filter input,
+  .dark .tabulator .tabulator-header-filter select { background-color: #0f172a !important; border-color: #334155 !important; color: #cbd5e1 !important; }
+  .tabulator .tabulator-header-filter input:focus,
+  .tabulator .tabulator-header-filter select:focus { border-color: #0ea5e9 !important; box-shadow: 0 0 0 1px #0ea5e9 !important; }
+  .tabulator .tabulator-header .tabulator-col .tabulator-header-filter { padding: 0.25rem !important; }
+  
+  .tabulator .tabulator-cell { 
+    white-space: normal !important; 
+    padding: 0.75rem 0.5rem !important; 
+    align-items: flex-start !important; 
+  }
+
+  input[type="time"] { color-scheme: light; }
+  .dark input[type="time"] { color-scheme: dark; }
+
+  /* Warning Badge Styles */
+  .rule-warn-badge {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
+    padding: 0.125rem 0.375rem; border-radius: 0.375rem; font-size: 0.65rem; font-weight: 700;
+    background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; cursor: help;
+  }
+  .dark .rule-warn-badge { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-dark-900 dark:text-slate-300 antialiased custom-scrollbar transition-colors duration-200 flex flex-col min-h-screen">
+
+<!-- HEADER -->
+<header class="bg-white dark:bg-dark-800 border-b border-slate-200 dark:border-dark-700 flex-none z-50 transition-colors relative sticky top-0 shadow-sm">
+  <div class="flex items-center justify-between px-4 sm:px-6 h-16 max-w-[1800px] mx-auto w-full">
+    <div class="flex items-center gap-4 sm:gap-8">
+      <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-lg tracking-tight hidden sm:flex">
+        <i data-lucide="plane" class="w-6 h-6 text-brand-500"></i>
+        WestJet Bid Builder
+      </div>
+      
+      <!-- Tabs -->
+      <nav class="flex gap-1 sm:gap-2" id="main-tabs">
+        <button class="tab-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-slate-100 dark:bg-dark-700 transition-colors active flex items-center gap-2" data-tab="viewer">
+          <i data-lucide="table-2" class="w-4 h-4"></i> <span class="hidden sm:inline">Viewer</span>
+        </button>
+        <button class="tab-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-700 transition-colors flex items-center gap-2" data-tab="gdo">
+          <i data-lucide="calendar-days" class="w-4 h-4"></i> <span class="hidden sm:inline">GDO Planner</span>
+        </button>
+        <button class="tab-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-700 transition-colors flex items-center gap-2" data-tab="bidder">
+          <i data-lucide="list-ordered" class="w-4 h-4"></i> <span class="hidden sm:inline">Bid Builder</span>
+        </button>
+      </nav>
+    </div>
+    
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Pilot Profile Settings Trigger -->
+      <button onclick="document.getElementById('cba-modal').classList.remove('hidden')" class="hidden flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-200 dark:border-indigo-500/30 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-500/20 font-medium text-xs">
+        <i data-lucide="user-cog" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">Pilot Profile (CBA)</span>
+      </button>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-dark-900 rounded-full border border-slate-200 dark:border-dark-700 transition-colors">
+        <i data-lucide="file-text" class="w-4 h-4 text-slate-500 dark:text-slate-400"></i>
+        <span id="file-label" class="text-xs text-slate-600 dark:text-slate-400 font-mono truncate max-w-[100px] sm:max-w-[200px]">No file loaded</span>
+      </div>
+      
+      <button onclick="clearLocalStorage()" class="hidden p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10 transition-colors text-xs font-bold items-center gap-1" id="clear-data-btn" title="Clear saved data">
+        <i data-lucide="trash-2" class="w-4 h-4"></i> <span class="hidden sm:inline">Clear</span>
+      </button>
+
+      <button onclick="toggleTheme()" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-dark-700 transition-colors" aria-label="Toggle Dark Mode">
+        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+        <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Pilot CBA Profile Modal -->
+<div id="cba-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-2xl w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-5 h-5 text-indigo-500"></i> CBA Guardrails Setup
+      </h2>
+      <button onclick="document.getElementById('cba-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Configure your pilot profile to enforce CBA constraints (Max Days Worked, GDO prorations) automatically.</p>
+    
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Line Type</label>
+        <select id="cba-line-type" class="input-base w-full p-2" onchange="updateCBAEngine()">
+          <option value="REGULAR">Regular Lineholder</option>
+          <option value="MIXED">Mixed Reserve</option>
+          <option value="FULL_RESERVE">Full Reserve</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Unpaid Absences (Days)</label>
+        <input type="number" id="cba-absences" min="0" max="31" value="0" class="input-base w-full p-2" onchange="updateCBAEngine()">
+        <p class="text-xs text-slate-500 mt-1">Affects max work days and GDO entitlement prorations.</p>
+      </div>
+    </div>
+    
+    <div class="mt-6 flex justify-end">
+      <button class="btn-base btn-primary w-full" onclick="document.getElementById('cba-modal').classList.add('hidden'); showToast('CBA Profile Saved');">Save Profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mock Block Schedule Modal -->
+<div id="schedule-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col">
+    <div class="flex justify-between items-center p-5 border-b border-slate-200 dark:border-dark-700">
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="calendar-days" class="w-5 h-5 text-brand-500"></i> Monthly Schedule View
+      </h2>
+      <button onclick="document.getElementById('schedule-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-6 h-6"></i></button>
+    </div>
+    
+    <div class="p-5 flex-none bg-slate-50 dark:bg-dark-900 border-b border-slate-200 dark:border-dark-700">
+        <div id="schedule-kpis" class="flex flex-wrap gap-4">
+            <!-- KPIs injected here -->
+        </div>
+    </div>
+
+    <div class="p-5 flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-dark-900/50" id="schedule-calendar-container">
+       <!-- Dynamic calendar injected here -->
+    </div>
+  </div>
+</div>
+
+<!-- Floating Side Navigation -->
+<button id="nav-left" class="hidden fixed left-2 sm:left-4 lg:left-8 top-1/2 -translate-y-1/2 z-[60] w-10 h-10 sm:w-14 sm:h-14 items-center justify-center bg-white/90 dark:bg-dark-800/90 backdrop-blur border border-slate-200 dark:border-dark-700 rounded-full shadow-2xl text-slate-500 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 hover:border-brand-500 dark:hover:border-brand-500 hover:scale-110 opacity-40 hover:opacity-100 transition-all focus:outline-none" aria-label="Previous step">
+  <i data-lucide="chevron-left" class="w-6 h-6 sm:w-8 sm:h-8"></i>
+</button>
+<button id="nav-right" class="hidden fixed right-2 sm:right-4 lg:right-8 top-1/2 -translate-y-1/2 z-[60] w-10 h-10 sm:w-14 sm:h-14 items-center justify-center bg-white/90 dark:bg-dark-800/90 backdrop-blur border border-slate-200 dark:border-dark-700 rounded-full shadow-2xl text-slate-500 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 hover:border-brand-500 dark:hover:border-brand-500 hover:scale-110 opacity-40 hover:opacity-100 transition-all focus:outline-none" aria-label="Next step">
+  <i data-lucide="chevron-right" class="w-6 h-6 sm:w-8 sm:h-8"></i>
+</button>
+
+<!-- MAIN CONTENT -->
+<main class="flex-1 w-full max-w-[1800px] mx-auto">
+  
+  <!-- TAB 1: PAIRING VIEWER -->
+  <div id="tab-viewer" class="tab-content flex flex-col p-4 sm:p-6 min-h-full">
+    
+    <div class="upload-zone mb-6 flex flex-col items-center justify-center group" id="upload-zone">
+      <input type="file" id="pdf-input" accept=".pdf" class="hidden">
+      <div class="w-16 h-16 rounded-full bg-brand-50 dark:bg-dark-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+        <i data-lucide="upload-cloud" class="w-8 h-8 text-brand-500"></i>
+      </div>
+      <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-2">Upload Pairing Document</h3>
+      <p class="text-slate-500 dark:text-slate-400 text-sm max-w-md">Drag & drop your WestJet PDF here or click to browse. Supports Final and Prelim formats.</p>
+    </div>
+
+    <!-- Progress Bar -->
+    <div id="parse-progress" class="hidden w-full max-w-md mx-auto mb-6">
+      <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+        <span>Parsing PDF data...</span>
+        <span id="parse-pct">0%</span>
+      </div>
+      <div class="h-2 w-full bg-slate-200 dark:bg-dark-700 rounded-full overflow-hidden">
+        <div class="fill h-full bg-brand-500 transition-all duration-300 rounded-full" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Stats Dashboard -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6 hidden" id="stats-bar"></div>
+
+    <!-- Filters -->
+    <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-4 mb-4 hidden flex-col gap-4 shadow-sm" id="filter-bar">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4"></i> Data Filters</h4>
+        <div class="relative" id="col-picker-wrap">
+          <button class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="toggleColPicker(event)">
+            <i data-lucide="columns" class="w-3.5 h-3.5"></i> Columns
+          </button>
+          <div id="col-picker" class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg shadow-xl z-50 py-2 max-h-64 overflow-y-auto custom-scrollbar"></div>
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap gap-3 items-center">
+        <div class="relative w-full md:w-64">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"></i>
+          <input type="text" id="search-input" class="input-base pl-9 w-full" placeholder="Search trips, routes, layovers...">
+        </div>
+        
+        <select id="filter-base" class="input-base w-24">
+          <option value="">All Bases</option>
+        </select>
+
+        <select id="filter-days" class="input-base w-32">
+          <option value="">All Durations</option>
+          <option value="2">2-day Trip</option>
+          <option value="3">3-day Trip</option>
+          <option value="4">4-day Trip</option>
+          <option value="5">5-day Trip</option>
+        </select>
+        
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-500 dark:text-slate-400">RPT After</span>
+          <input type="time" id="filter-rpt-after" class="input-base py-1 px-2 w-24 text-xs" title="Report time after">
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-500 dark:text-slate-400">RLS Before</span>
+          <input type="time" id="filter-rls-before" class="input-base py-1 px-2 w-24 text-xs" title="Release time before">
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap gap-4 pt-2 border-t border-slate-200 dark:border-dark-700">
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+          <input type="checkbox" id="filter-redeye" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Redeye
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+          <input type="checkbox" id="filter-lazy" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Lazy Pairing
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+          <input type="checkbox" id="filter-commutable" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Commutable
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+          <input type="checkbox" id="filter-deadhead" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Deadhead (DH)
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+          <input type="checkbox" id="filter-weekday" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Weekday Only
+        </label>
+        <div class="w-px h-5 bg-slate-300 dark:bg-dark-700 mx-2"></div>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white" title="Exclude Hawaii">
+          <input type="checkbox" id="filter-avoid-p-etops" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> No P-ETOPS
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white" title="Exclude Europe">
+          <input type="checkbox" id="filter-avoid-a-etops" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> No A-ETOPS
+        </label>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div id="pairing-table" class="w-full text-sm flex-1"></div>
+  </div>
+
+  <!-- TAB 2: GDO PLANNER -->
+  <div id="tab-gdo" class="tab-content hidden flex-col p-4 sm:p-6 min-h-full">
+    <div class="max-w-6xl mx-auto w-full flex-1 flex flex-col">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">GDO Planner</h2>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Select your Guaranteed Days Off to automatically filter conflicting pairings.</p>
+        </div>
+        <div class="flex gap-3">
+          <button class="btn-base btn-secondary" onclick="clearAllGDOs()">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Clear All
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-5 mb-8 flex flex-wrap items-center gap-4 shadow-sm">
+        <div class="flex-1 min-w-[300px] relative">
+          <i data-lucide="keyboard" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"></i>
+          <input type="text" id="gdo-text-input" class="input-base pl-9 w-full" placeholder="Quick add: Mar 1,5,10-12 or 2026-03-01">
+        </div>
+        <button class="btn-base btn-primary" onclick="addGDOsFromText()">Add Dates</button>
+        <div class="w-px h-8 bg-slate-200 dark:bg-dark-700 mx-2 hidden md:block"></div>
+        <div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+          <div class="w-4 h-4 rounded bg-emerald-500"></div> Selected GDO
+          <div class="w-4 h-4 rounded bg-brand-50 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/50 ml-3"></div> Pairing Date
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 p-4 rounded-xl text-sm mb-8 flex items-start gap-3 shadow-sm">
+        <i data-lucide="info" class="w-5 h-5 text-brand-500 flex-none mt-0.5"></i>
+        <div id="gdo-summary" class="text-slate-600 dark:text-slate-300 leading-relaxed flex-1">
+          No GDO days selected. Click calendar dates or use the quick add input above.
+        </div>
+        
+        <!-- CBA Guardrails Live Readout for GDOs -->
+        <div id="cba-gdo-guardrail" class="hidden flex-none bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 px-3 py-2 rounded-lg border border-indigo-200 dark:border-indigo-500/20 text-xs font-medium text-right">
+           <div class="mb-1 uppercase tracking-wide opacity-80">CBA Minimum Required</div>
+           <div class="text-lg font-bold" id="cba-req-gdos">0</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8" id="calendar-container"></div>
+      
+    </div>
+  </div>
+
+  <!-- TAB 3: BID BUILDER -->
+  <div id="tab-bidder" class="tab-content hidden flex-col p-4 sm:p-6 min-h-full">
+    
+    <!-- Top Header + Bid Summary Dashboard -->
+    <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-4 gap-4 flex-none">
+      <div class="flex-1 w-full">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mb-1">
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Bid Builder</h2>
+          
+          <!-- Live Bid Summary Dash (Moved from bottom panel) -->
+          <div id="points-summary" class="hidden sm:flex flex-wrap items-center gap-2">
+             <!-- Automatically injected by renderBidSlots() -->
+             <span class="text-slate-400 dark:text-slate-500 italic text-sm">List is empty</span>
+          </div>
+        </div>
+        <p class="text-slate-500 dark:text-slate-400 text-sm">Automate your bid ordering based on preferred strategies.</p>
+      </div>
+
+      <!-- Mobile summary fallback -->
+      <div id="points-summary-mobile" class="flex sm:hidden flex-wrap gap-2 w-full"></div>
+      
+      <div class="flex items-center gap-3 shrink-0">
+        <div id="cba-max-work-badge" class="hidden items-center text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-dark-700 text-slate-500 border border-slate-200 dark:border-dark-600"></div>
+        <button class="btn-base btn-success" onclick="runBidBuilder(true)">
+          <i data-lucide="zap" class="w-4 h-4"></i> Auto-Generate
+        </button>
+        <button class="btn-base btn-secondary" onclick="exportBid()">
+          <i data-lucide="download" class="w-4 h-4"></i> Export TXT
+        </button>
+      </div>
+    </div>
+
+    <!-- Compressible Strategy Panel -->
+    <details class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl mb-4 shadow-sm group flex-none" open>
+      <summary class="p-3 font-medium text-slate-700 dark:text-slate-300 cursor-pointer flex justify-between items-center bg-slate-50 dark:bg-dark-900 rounded-xl group-open:rounded-b-none group-open:border-b border-slate-200 dark:border-dark-700 transition-colors hover:bg-slate-100 dark:hover:bg-dark-800">
+         <div class="flex items-center gap-2 text-sm"><i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-500"></i> Strategy & Filters</div>
+         <div class="flex items-center gap-4 text-xs text-slate-500">
+            <span class="hidden sm:inline">Click to collapse/expand</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i>
+         </div>
+      </summary>
+      
+      <div class="p-4 flex flex-col gap-4">
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1"><i data-lucide="brain-circuit" class="w-4 h-4"></i> Presets:</span>
+            <div class="flex bg-slate-100 dark:bg-dark-900 rounded-lg p-1 border border-slate-200 dark:border-dark-700 mode-toggle">
+              <button class="px-3 py-1 rounded-md text-sm font-medium transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-mode="lazy" onclick="applyPreset('lazy')">
+                ☕ Lazy
+              </button>
+              <button class="px-3 py-1 rounded-md text-sm font-medium transition-colors text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 active" data-mode="efficient" onclick="applyPreset('efficient')">
+                ⚡ Efficient
+              </button>
+            </div>
+          </div>
+
+          <div class="w-px h-6 bg-slate-200 dark:bg-dark-700 hidden md:block"></div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Duration:</span>
+            <select id="prefer-days" class="input-base py-1 text-sm w-36" onchange="if(bidTable) runBidBuilder(false)">
+              <option value="0" selected>Any duration</option>
+              <option value="5">5-day pairings</option>
+              <option value="4">4-5 day pairings</option>
+              <option value="3">3-day pairings</option>
+              <option value="2">2-day pairings</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Layover (hrs):</span>
+            <input type="number" id="filter-min-lay" placeholder="Min" class="input-base py-1 px-2 w-16 text-center text-sm" onchange="if(bidTable) runBidBuilder(false)">
+            <span class="text-slate-400 dark:text-slate-500">-</span>
+            <input type="number" id="filter-max-lay" placeholder="Max" class="input-base py-1 px-2 w-16 text-center text-sm" onchange="if(bidTable) runBidBuilder(false)">
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Min Credit:</span>
+            <input type="number" id="filter-min-credit" placeholder="Hrs" class="input-base py-1 px-2 w-16 text-center text-sm" onchange="if(bidTable) runBidBuilder(false)">
+          </div>
+        </div>
+
+        <!-- Sliders for Custom Weights -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-3 border-t border-slate-200 dark:border-dark-700">
+           <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-xs font-semibold text-slate-600 dark:text-slate-300">Credit Priority</label>
+                <span id="val-credit" class="text-xs font-mono text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-1.5 rounded">8</span>
+              </div>
+              <input type="range" id="weight-credit" min="0" max="15" value="8" class="w-full accent-brand-500" oninput="updateWeightLabels('credit')" onchange="applyWeights()">
+           </div>
+           <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-xs font-semibold text-slate-600 dark:text-slate-300">Layover Length</label>
+                <span id="val-layover" class="text-xs font-mono text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-1.5 rounded">0</span>
+              </div>
+              <input type="range" id="weight-layover" min="0" max="15" value="0" class="w-full accent-brand-500" oninput="updateWeightLabels('layover')" onchange="applyWeights()">
+           </div>
+           <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-xs font-semibold text-slate-600 dark:text-slate-300">Commutable Bonus</label>
+                <span id="val-commutable" class="text-xs font-mono text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-1.5 rounded">15</span>
+              </div>
+              <input type="range" id="weight-commutable" min="0" max="50" step="5" value="15" class="w-full accent-brand-500" oninput="updateWeightLabels('commutable')" onchange="applyWeights()">
+           </div>
+           <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-xs font-semibold text-slate-600 dark:text-slate-300">Redeye Penalty</label>
+                <span id="val-redeye" class="text-xs font-mono text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-1.5 rounded">60</span>
+              </div>
+              <input type="range" id="weight-redeye" min="0" max="100" step="10" value="60" class="w-full accent-brand-500" oninput="updateWeightLabels('redeye')" onchange="applyWeights()">
+           </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Split View (Unconstrained Height for seamless page scrolling) -->
+    <div class="flex flex-col xl:flex-row items-start gap-6 pb-12 flex-1 w-full">
+      <!-- Left: Scored Table -->
+      <div class="w-full xl:w-auto xl:flex-1 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl overflow-hidden shadow-sm">
+        <div class="p-3 bg-slate-50 dark:bg-dark-900 border-b border-slate-200 dark:border-dark-700 font-medium text-sm text-slate-700 dark:text-slate-300 flex items-center justify-between">
+          <span>Available Pairings (Ranked)</span>
+          <span class="text-xs text-slate-500 font-normal">Click a row to add to bid list</span>
+        </div>
+        <div id="bid-table" class="w-full text-sm border-0! rounded-none!"></div>
+      </div>
+
+      <!-- Right: Bid List -->
+      <div class="w-full xl:w-[450px] flex flex-col flex-none bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl overflow-hidden shadow-xl xl:sticky xl:top-[88px]">
+        <div class="p-4 bg-slate-50 dark:bg-dark-900 border-b border-slate-200 dark:border-dark-700 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="list-checks" class="w-5 h-5 text-brand-500"></i> My Bid List
+            </h3>
+            <span id="bid-count" class="text-xs font-mono bg-white dark:bg-dark-800 px-2 py-1 rounded text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-dark-700">0/16 slots</span>
+          </div>
+          <div>
+            <a href="#" onclick="event.preventDefault(); showScheduleModal();" class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors" aria-label="View Monthly Schedule">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              <span>View Monthly Schedule</span>
+            </a>
+          </div>
+        </div>
+        
+        <div class="p-3 bg-slate-50 dark:bg-dark-900 flex flex-col gap-2" id="bid-slots">
+          <!-- Bid items injected here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast Container -->
+<div id="toast" class="fixed bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium shadow-2xl z-[999] transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none">
+  <i id="toast-icon" data-lucide="check-circle" class="w-5 h-5"></i>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+// =====================================================================
+// EMBEDDED JSON RULE OBJECTS (v1)
+// =====================================================================
+const REST_RULES = {
+  "version": "rest_guardrails.v2_simple",
+  "generated_on": "2026-02-23",
+  "purpose": "Minimal rest guardrails for bid validation (home base rest and away-from-base rest) plus reserve RAP rest constraints from the CBA. Intended for schedule legality checks when assembling pairings/lines from a bid. Excludes open time, trades, vacation.",
+  "required_metrics": [
+    "transition.prev_release_local",
+    "transition.next_report_local",
+    "transition.ends_at_base",
+    "transition.starts_at_base",
+    "rest.hours",
+    "rest.location",
+    "pilot.is_reserve",
+    "pilot.has_additional_reserve_days",
+    "rest.minimum_hours"
+  ],
+  "derive": {
+    "rest.hours": "hours_between(transition.prev_release_local, transition.next_report_local) in local time basis (HBT).",
+    "rest.location": "HOME if transition.ends_at_base==true else AWAY.",
+    "rest.minimum_hours": "rest.hours (alias) for rules that use rest.minimum_hours."
+  },
+  "enforcement": {
+    "BLOCK": "must pass",
+    "WARN": "warn-only"
+  },
+  "rules": [
+    {
+      "id": "REST-HOME-MIN-12-WARN",
+      "title": "Minimum rest at home base >= 12 hours (CAR-derived simplified)",
+      "severity": "WARN",
+      "when": "REST_EVALUATION",
+      "if": [
+        {
+          "field": "rest.location",
+          "op": "=",
+          "value": "HOME"
+        }
+      ],
+      "must": [
+        {
+          "metric": "rest.hours",
+          "op": ">=",
+          "value": 12,
+          "units": "hours"
+        }
+      ],
+      "source": {
+        "doc": "tiredpilots_fatigue_cheatsheet_2020-11-25",
+        "section": "Minimum Rest",
+        "clause": "Ref. 700.40",
+        "page": 2
+      },
+      "notes": "Derived from fatigue cheat sheet; verify against current CARs. Do not hard-block until verified."
+    },
+    {
+      "id": "REST-AWAY-MIN-10-WARN",
+      "title": "Minimum rest away from base >= 10 hours (CAR-derived simplified)",
+      "severity": "WARN",
+      "when": "REST_EVALUATION",
+      "if": [
+        {
+          "field": "rest.location",
+          "op": "=",
+          "value": "AWAY"
+        }
+      ],
+      "must": [
+        {
+          "metric": "rest.hours",
+          "op": ">=",
+          "value": 10,
+          "units": "hours"
+        }
+      ],
+      "source": {
+        "doc": "tiredpilots_fatigue_cheatsheet_2020-11-25",
+        "section": "Minimum Rest",
+        "clause": "Ref. 700.40",
+        "page": 2
+      },
+      "notes": "Derived from fatigue cheat sheet; verify against current CARs. Do not hard-block until verified."
+    },
+    {
+      "id": "CBA-10-10.01-REST-BLOCK",
+      "title": "Reserve rest after finishing assignment with additional reserve days >= 12 hours (RAP end fixed)",
+      "severity": "BLOCK",
+      "when": "REST_EVALUATION",
+      "if": [
+        {
+          "field": "pilot.is_reserve",
+          "op": "=",
+          "value": true
+        },
+        {
+          "field": "pilot.has_additional_reserve_days",
+          "op": "=",
+          "value": true
+        }
+      ],
+      "must": [
+        {
+          "metric": "rest.minimum_hours",
+          "op": ">=",
+          "value": 12,
+          "units": "hours"
+        }
+      ],
+      "source": {
+        "doc": "cba_2023-07-07_collective_agreement_no2",
+        "section": "10-10",
+        "clause": "10-10.01",
+        "page": 92
+      },
+      "notes": "If rest overlaps next RAP, shift RAP start later; do not extend RAP end."
+    },
+    {
+      "id": "CBA-10-10.02-REST-BLOCK",
+      "title": "Reserve rest between RAPs >= 10 hours (per CARs)",
+      "severity": "BLOCK",
+      "when": "RAP_TO_RAP_ASSIGNMENT",
+      "if": [
+        {
+          "field": "pilot.is_reserve",
+          "op": "=",
+          "value": true
+        }
+      ],
+      "must": [
+        {
+          "metric": "rest.minimum_hours",
+          "op": ">=",
+          "value": 10,
+          "units": "hours"
+        }
+      ],
+      "source": {
+        "doc": "cba_2023-07-07_collective_agreement_no2",
+        "section": "10-10",
+        "clause": "10-10.02",
+        "page": 92
+      },
+      "notes": "Apply the greater of contract rest and CAR rest if/when CAR rules are verified and enabled."
+    }
+  ]
+};
+
+const DUTY_RULES = {
+  "version": "simple_bid_rules.v1",
+  "generated_on": "2026-02-23",
+  "purpose": "Minimal guardrails for pairing/line scheduling in the bid builder: max pairing length, max scheduled days (monthly/prorated), minimum days off, and minimum rest/FDP limits where present. Excludes open time, trades, vacation.",
+  "enforcement": {
+    "BLOCK": "must pass",
+    "WARN": "warn-only",
+    "INFO": "non-blocking"
+  },
+  "required_metrics": [
+    "bid.priorities", "bid.priority", "day_off.may_move_grd", "day_off.move_reason_provided_in_writing",
+    "day_off.move_requires_operational_need", "day_off.move_window_before_report_time", "duty.fdp",
+    "flight_time.rolling_28_days", "flight_time.rolling_365_days", "flight_time.rolling_90_days",
+    "grd.involuntary_utilization_allowed", "pairing.scheduled_length_days", "reserve_line.days_off.gdo_grd",
+    "reserve_line.days_off.non_gdo_grd", "reserve_line.has_block_of_consecutive_grds", "rest.min_away_from_base",
+    "rest.min_home_base", "rest.minimum_hours", "schedule.days_worked", "system.narrowbody_5day_pairings_share"
+  ],
+  "rules": [
+    {
+      "id": "CAR-700.27-FT-001",
+      "title": "Maximum flight time rolling limits (112h/28d, 300h/90d, 1000h/365d)",
+      "layer": "LEGAL",
+      "severity": "WARN",
+      "trigger": "SCHEDULE_EVALUATION",
+      "constraint": {
+        "must": [
+          { "metric": "flight_time.rolling_28_days", "op": "<=", "value": 112, "units": "hours" },
+          { "metric": "flight_time.rolling_90_days", "op": "<=", "value": 300, "units": "hours" },
+          { "metric": "flight_time.rolling_365_days", "op": "<=", "value": 1000, "units": "hours" }
+        ]
+      },
+      "source": { "doc": "tiredpilots_fatigue_cheatsheet_2020-11-25", "section": "Basic Flight/Duty/Rest Rules", "clause": "Ref. 700.27", "page": 2 }
+    },
+    {
+      "id": "CAR-700.28-FDP-001",
+      "title": "Maximum FDP must not exceed table value by acclimatized start time, flights, and average flight time bucket",
+      "layer": "LEGAL",
+      "severity": "WARN",
+      "trigger": "DUTY_BUILD_OR_EVAL",
+      "constraint": {
+        "must": [
+          {
+            "metric": "duty.fdp",
+            "op": "<=",
+            "value_from_table": {
+              "table_id": "FDP_MAX_V1",
+              "map_inputs": {
+                "acclimatized_start_time": "duty.start_time_acclimatized",
+                "avg_flight_time_bucket": "duty.avg_flight_time_bucket",
+                "flights_bucket": "duty.flights_bucket"
+              }
+            },
+            "units": "hours"
+          }
+        ]
+      },
+      "source": { "doc": "tiredpilots_fatigue_cheatsheet_2020-11-25", "section": "Maximum Flight Duty Period (FDP)", "clause": "Ref. 700.28", "page": 2 }
+    }
+  ],
+  "tables": [
+    {
+      "id": "FDP_MAX_V1",
+      "title": "Max FDP by acclimatized start time, flights bucket, and average flight time bucket (cheat sheet copy)",
+      "inputs": [
+        { "name": "acclimatized_start_time", "type": "time_hhmm" },
+        { "name": "avg_flight_time_bucket", "type": "enum[a_lt30,a_30_49,a_ge50]" },
+        { "name": "flights_bucket", "type": "enum[varies_by_bucket]" }
+      ],
+      "output": { "name": "max_fdp_hours", "type": "number" },
+      "rows": [
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0000-0359", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0400-0459", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0500-0559", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0600-0659", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 13 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 13 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 13 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "0700-1259", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 12.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 11.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 10.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 12.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 11.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 10.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 12.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 11.5 },
+        { "acclimatized_start_range": "1300-1659", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 10.5 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 12 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "1700-2159", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 11 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "2200-2259", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "1-11", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "12-17", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_lt30", "flights_bucket": "18+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "1-7", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "8-11", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_30_49", "flights_bucket": "12+", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "1-4", "max_fdp_hours": 10 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "5-6", "max_fdp_hours": 9 },
+        { "acclimatized_start_range": "2300-2359", "avg_flight_time_bucket": "a_ge50", "flights_bucket": "8+", "max_fdp_hours": 9 }
+      ]
+    }
+  ]
+};
+
+// =====================================================================
+// LEGALITY GUARDRAILS MODULE (v1)
+// =====================================================================
+const LegalityGuardrails = {
+  evaluate: function(metrics, triggerContext = null) {
+    const result = { overall_status: 'PASS', violations: [] };
+    
+    const inScopeDutyRules = DUTY_RULES.rules.filter(r => 
+      r.id === 'CAR-700.28-FDP-001' || r.id === 'CAR-700.27-FT-001'
+    );
+    const allRules = [...REST_RULES.rules, ...inScopeDutyRules];
+
+    for (const rule of allRules) {
+      if (!rule.id.startsWith('REST-') && !rule.id.startsWith('CBA-10-10') && !rule.id.startsWith('CAR-700')) {
+          continue;
+      }
+
+      const ruleTrigger = rule.when || rule.trigger;
+      if (ruleTrigger && triggerContext && ruleTrigger !== triggerContext) continue;
+
+      if (this._checkConditions(rule.if, metrics)) {
+        this._evaluateConstraints(rule, metrics, result);
+      }
+    }
+    return result;
+  },
+
+  _checkConditions: function(conditions, metrics) {
+    if (!conditions || conditions.length === 0) return true;
+    for (const cond of conditions) {
+      const val = metrics[cond.field];
+      if (val === undefined) return false; 
+      
+      if (cond.op === '=' && val !== cond.value) return false;
+      if (cond.op === '!=' && val === cond.value) return false;
+    }
+    return true;
+  },
+
+  _evaluateConstraints: function(rule, metrics, result) {
+    const musts = rule.constraint ? rule.constraint.must : rule.must;
+    if (!musts) return;
+
+    for (const req of musts) {
+      const observedValue = metrics[req.metric];
+      if (observedValue === undefined || observedValue === null) continue;
+
+      let requiredValue = req.value;
+      let usedTableRow = null;
+
+      if (req.value_from_table) {
+        const lookup = this._lookupTable(req.value_from_table, metrics);
+        if (lookup === null) continue; 
+        requiredValue = lookup.value;
+        usedTableRow = lookup.row;
+      }
+
+      let passed = true;
+      if (req.op === '>=') passed = observedValue >= requiredValue;
+      else if (req.op === '<=') passed = observedValue <= requiredValue;
+      else if (req.op === '=') passed = observedValue === requiredValue;
+
+      if (!passed) {
+        result.violations.push({
+          rule_id: rule.id,
+          rule_title: rule.title,
+          severity: rule.severity,
+          observed_value: observedValue,
+          required_value: requiredValue,
+          source: rule.source ? `${rule.source.doc} | Sec ${rule.source.section || ''} | Pg ${rule.source.page || ''}` : '',
+          _table_row_used: usedTableRow
+        });
+
+        if (rule.severity === 'BLOCK') result.overall_status = 'FAIL';
+        else if (result.overall_status !== 'FAIL') result.overall_status = 'WARN';
+      }
+    }
+  },
+
+  _lookupTable: function(tableDef, metrics) {
+    const table = DUTY_RULES.tables.find(t => t.id === tableDef.table_id);
+    if (!table) return null;
+
+    if (table.id === 'FDP_MAX_V1') {
+      const accStartStr = metrics[tableDef.map_inputs.acclimatized_start_time];
+      const avgBucket = metrics[tableDef.map_inputs.avg_flight_time_bucket];
+      const flightsBucket = metrics[tableDef.map_inputs.flights_bucket];
+
+      if (!accStartStr || !avgBucket || !flightsBucket) return null;
+
+      const startInt = parseInt(String(accStartStr).replace(':', ''), 10);
+      if (isNaN(startInt)) return null;
+
+      for (const row of table.rows) {
+        if (row.avg_flight_time_bucket === avgBucket && row.flights_bucket === flightsBucket) {
+          const [rangeStart, rangeEnd] = row.acclimatized_start_range.split('-').map(Number);
+          if (startInt >= rangeStart && startInt <= rangeEnd) {
+            return { value: row.max_fdp_hours, row: row };
+          }
+        }
+      }
+    }
+    return null;
+  }
+};
+
+// =====================================================================
+// CALENDAR REST RULES (1-in-7, 3-in-17)
+// =====================================================================
+function checkRestRules(workingDates, pairings) {
+  if (workingDates.size === 0) return true;
+  const dates = Array.from(workingDates).sort();
+  const minDate = new Date(dates[0] + 'T12:00:00');
+  const maxDate = new Date(dates[dates.length - 1] + 'T12:00:00');
+  
+  // Create an evaluation array extending 6 days before and after the working window
+  const evaluateDates = [];
+  let cur = new Date(minDate.getTime() - 6 * 86400000);
+  const end = new Date(maxDate.getTime() + 6 * 86400000);
+  
+  while (cur <= end) {
+    evaluateDates.push(cur.toISOString().slice(0, 10));
+    cur = new Date(cur.getTime() + 86400000);
+  }
+  
+  // 1. Check 1-in-7 Rule (Must have at least one day off OR a layover >24h in every 7 day period)
+  for (let i = 0; i <= evaluateDates.length - 7; i++) {
+    const window7 = evaluateDates.slice(i, i + 7);
+    let hasOffDay = false;
+    let windowHasWork = false;
+    
+    for (const wd of window7) {
+      if (!workingDates.has(wd)) {
+        hasOffDay = true;
+      } else {
+        windowHasWork = true;
+      }
+    }
+    
+    if (windowHasWork && !hasOffDay) {
+      let hasLongLayover = false;
+      for (const p of pairings) {
+        if (p.longest_layover >= 24) {
+          if (p.all_dates && p.all_dates.some(pd => window7.includes(pd))) {
+            hasLongLayover = true;
+            break;
+          }
+        }
+      }
+      if (!hasLongLayover) return false;
+    }
+  }
+  
+  // 2. Check 3-in-17 Rule (Must have 3 consecutive days off in every 17 day period)
+  for (let i = 0; i <= evaluateDates.length - 17; i++) {
+    const window17 = evaluateDates.slice(i, i + 17);
+    let windowHasWork = false;
+    for(const wd of window17) {
+        if(workingDates.has(wd)) windowHasWork = true;
+    }
+    
+    if (windowHasWork) {
+        let maxConsecutiveOff = 0;
+        let currentConsecutiveOff = 0;
+        
+        for (const wd of window17) {
+          if (!workingDates.has(wd)) {
+            currentConsecutiveOff++;
+            if (currentConsecutiveOff > maxConsecutiveOff) maxConsecutiveOff = currentConsecutiveOff;
+          } else {
+            currentConsecutiveOff = 0;
+          }
+        }
+        if (maxConsecutiveOff < 3) return false;
+    }
+  }
+  
+  return true;
+}
+
+
+// Reusable Guardrail Evaluation Logic for Pairings
+function evaluatePairingGuardrails(p) {
+    p.warnings = [];
+    let isPairingLegal = true;
+    
+    // 1. Evaluate Layovers against REST Guardrails (HOME and AWAY REST)
+    if (p.layovers && p.layovers.length > 0) {
+      for (const lay of p.layovers) {
+        const layMins = timeStrToMinutes(lay.duration);
+        if (isNaN(layMins)) continue;
+        
+        const layHours = layMins / 60;
+        
+        // Context-aware classification based on pairing base and layover location
+        const pairingBase = p.base || null; 
+        const isHome = pairingBase && lay.location === pairingBase;
+        const restLocation = isHome ? "HOME" : "AWAY";
+        
+        const res = LegalityGuardrails.evaluate({
+          "rest.hours": layHours,
+          "rest.minimum_hours": layHours,
+          "rest.location": restLocation,
+          "pilot.is_reserve": pilotState.is_reserve,
+          "pilot.has_additional_reserve_days": pilotState.has_additional_reserve_days
+        }, "REST_EVALUATION");
+        
+        if (res.overall_status === 'FAIL') isPairingLegal = false; 
+        if (res.overall_status === 'WARN') p.warnings.push(...res.violations);
+      }
+    }
+    
+    // 2. Evaluate Duty/FDP against DUTY Guardrails (FDP_MAX_V1)
+    if (p.days) {
+        Object.keys(p.days).forEach(dayNum => {
+           const legs = p.days[dayNum];
+           if (!legs || legs.length === 0) return;
+           
+           const firstLeg = legs[0];
+           const lastLeg = legs[legs.length - 1];
+           
+           let totalBlockMins = 0;
+           legs.forEach(l => {
+             const [h, m] = (l.duration||"0h00").split(/[h:]/).map(Number);
+             totalBlockMins += (h * 60) + (m || 0);
+           });
+           
+           // FDP Bucketing Logic
+           const numFlights = legs.length;
+           const avgBlockMins = totalBlockMins / numFlights;
+           
+           let avgBucket = 'a_ge50';
+           if (avgBlockMins < 30) avgBucket = 'a_lt30';
+           else if (avgBlockMins < 50) avgBucket = 'a_30_49';
+
+           let flightBucket = "1-4";
+           if (avgBucket === 'a_lt30') {
+             if (numFlights <= 11) flightBucket = "1-11";
+             else if (numFlights <= 17) flightBucket = "12-17";
+             else flightBucket = "18+";
+           } else if (avgBucket === 'a_30_49') {
+             if (numFlights <= 7) flightBucket = "1-7";
+             else if (numFlights <= 11) flightBucket = "8-11";
+             else flightBucket = "12+";
+           } else {
+             if (numFlights <= 4) flightBucket = "1-4";
+             else if (numFlights <= 6) flightBucket = "5-6";
+             else flightBucket = "8+"; 
+           }
+
+           // FDP START TIME CONSISTENCY
+           const rptMinsRaw = timeStrToMinutes(firstLeg.dep_time) - 60;
+           const rlsMins = timeStrToMinutes(lastLeg.arr_time) + 15;
+           let fdpHours = (rlsMins - rptMinsRaw) / 60;
+           if (fdpHours < 0) fdpHours += 24; 
+           
+           // Map exactly to the derived report time into "HHMM" format
+           let actualRptMins = rptMinsRaw < 0 ? rptMinsRaw + 1440 : rptMinsRaw;
+           const rptH = Math.floor(actualRptMins / 60) % 24;
+           const rptM = actualRptMins % 60;
+           const startTimeStr = String(rptH).padStart(2, '0') + String(rptM).padStart(2, '0');
+
+           const fdpRes = LegalityGuardrails.evaluate({
+              "duty.fdp": fdpHours,
+              "duty.start_time_acclimatized": startTimeStr,
+              "duty.avg_flight_time_bucket": avgBucket,
+              "duty.flights_bucket": flightBucket
+           }, "DUTY_BUILD_OR_EVAL");
+
+           if (fdpRes.overall_status === 'FAIL') isPairingLegal = false; 
+           if (fdpRes.overall_status === 'WARN') p.warnings.push(...fdpRes.violations);
+        });
+    }
+
+    const uniqWarns = new Map();
+    p.warnings.forEach(w => uniqWarns.set(w.rule_id, w));
+    p.warnings = Array.from(uniqWarns.values());
+
+    return isPairingLegal;
+}
+
+
+// =====================================================================
+// STATE
+// =====================================================================
+let allPairings = [];
+let gdoDays = new Set();      
+let bidList = [];              
+let bidMode = 'efficient';
+let pairingMonth = null;       
+let pairingTable = null;
+let bidTable = null;
+let _detailsCache = [];        
+let _colPickerOpen = false;    
+
+let bidWeights = { credit: 8, layover: 0, commutable: 15, redeye: 60 };
+
+// Sourced from user/app state (currently mock defaults until Reserve UI is built)
+let pilotState = {
+  is_reserve: false, 
+  has_additional_reserve_days: false 
+};
+
+// =====================================================================
+// LOCAL STORAGE
+// =====================================================================
+function saveData() {
+  try {
+    const data = {
+      allPairings,
+      gdoDays: Array.from(gdoDays),
+      bidList,
+      pairingMonth,
+      bidWeights
+    };
+    localStorage.setItem('westjet_bid_data', JSON.stringify(data));
+    document.getElementById('clear-data-btn').classList.remove('hidden');
+    document.getElementById('clear-data-btn').classList.add('flex');
+  } catch (e) {
+    console.warn('Could not save to localStorage (file might be too large)', e);
+  }
+}
+
+function loadData() {
+  try {
+    const stored = localStorage.getItem('westjet_bid_data');
+    if (stored) {
+      const data = JSON.parse(stored);
+      allPairings = data.allPairings || [];
+      gdoDays = new Set(data.gdoDays || []);
+      bidList = data.bidList || [];
+      pairingMonth = data.pairingMonth || null;
+      if (data.bidWeights) {
+        bidWeights = data.bidWeights;
+        syncSlidersToWeights();
+      }
+
+      if (allPairings.length > 0) {
+        document.getElementById('file-label').textContent = 'Loaded from Saved Data';
+        document.getElementById('upload-zone').classList.add('hidden');
+        document.getElementById('stats-bar').classList.remove('hidden');
+        document.getElementById('filter-bar').classList.remove('hidden');
+        document.getElementById('filter-bar').classList.add('flex');
+        document.getElementById('clear-data-btn').classList.remove('hidden');
+        document.getElementById('clear-data-btn').classList.add('flex');
+        
+        renderStats();
+        renderPairingTable();
+        populateBaseFilter();
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load data', e);
+  }
+}
+
+function clearLocalStorage() {
+  if (confirm('Are you sure you want to clear all uploaded pairings, GDOs, and your bid list?')) {
+    localStorage.removeItem('westjet_bid_data');
+    location.reload();
+  }
+}
+
+// Call loadData on start
+document.addEventListener('DOMContentLoaded', loadData);
+
+const PBS_WEIGHTS = [1000,940,870,800,500,440,370,300,100,95,87,80,10,7,3,1];
+const MAX_BID_SLOTS = 16;
+
+// =====================================================================
+// INIT & NAVIGATION
+// =====================================================================
+lucide.createIcons();
+
+const TABS = ['viewer', 'gdo', 'bidder'];
+
+function navigateTabs(direction) {
+  const currentTabBtn = document.querySelector('.tab-btn.active');
+  if (!currentTabBtn) return;
+  const currentId = currentTabBtn.dataset.tab;
+  const currentIndex = TABS.indexOf(currentId);
+  const nextIndex = currentIndex + direction;
+  
+  if (nextIndex >= 0 && nextIndex < TABS.length) {
+    document.querySelector(`[data-tab='${TABS[nextIndex]}']`).click();
+    window.scrollTo(0,0);
+  }
+}
+
+document.getElementById('nav-left').addEventListener('click', () => navigateTabs(-1));
+document.getElementById('nav-right').addEventListener('click', () => navigateTabs(1));
+
+function updateNavArrows(tabId) {
+  const leftBtn = document.getElementById('nav-left');
+  const rightBtn = document.getElementById('nav-right');
+  const idx = TABS.indexOf(tabId);
+  
+  if (idx === 0) {
+    leftBtn.classList.remove('flex');
+    leftBtn.classList.add('hidden');
+  } else {
+    leftBtn.classList.add('flex');
+    leftBtn.classList.remove('hidden');
+  }
+  
+  if (idx === TABS.length - 1) {
+    rightBtn.classList.remove('flex');
+    rightBtn.classList.add('hidden');
+  } else {
+    rightBtn.classList.add('flex');
+    rightBtn.classList.remove('hidden');
+  }
+}
+
+function toggleTheme() {
+  if (document.documentElement.classList.contains('dark')) {
+    document.documentElement.classList.remove('dark');
+    localStorage.theme = 'light';
+  } else {
+    document.documentElement.classList.add('dark');
+    localStorage.theme = 'dark';
+  }
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active', 'text-slate-900', 'dark:text-white', 'bg-slate-100', 'dark:bg-dark-700');
+      b.classList.add('text-slate-500', 'dark:text-slate-400');
+    });
+    document.querySelectorAll('.tab-content').forEach(t => {
+      t.classList.add('hidden');
+      t.classList.remove('flex');
+    });
+    
+    btn.classList.add('active', 'text-slate-900', 'dark:text-white', 'bg-slate-100', 'dark:bg-dark-700');
+    btn.classList.remove('text-slate-500', 'dark:text-slate-400');
+    
+    const target = document.getElementById('tab-' + btn.dataset.tab);
+    target.classList.remove('hidden');
+    target.classList.add('flex');
+    
+    updateNavArrows(btn.dataset.tab);
+    
+    if (btn.dataset.tab === 'gdo') renderCalendar();
+    if (btn.dataset.tab === 'bidder') initBidTable();
+  });
+});
+
+// Select Viewer by default
+document.querySelector('[data-tab="viewer"]').click();
+
+// =====================================================================
+// TOAST NOTIFICATIONS
+// =====================================================================
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  const icon = document.getElementById('toast-icon');
+  const txt = document.getElementById('toast-msg');
+  
+  txt.textContent = msg;
+  t.className = `fixed bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium shadow-2xl z-[999] transform transition-all duration-300 ${type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20'}`;
+  icon.setAttribute('data-lucide', type === 'success' ? 'check-circle' : 'alert-circle');
+  lucide.createIcons();
+  
+  requestAnimationFrame(() => {
+    t.classList.remove('translate-y-10', 'opacity-0');
+  });
+  
+  setTimeout(() => {
+    t.classList.add('translate-y-10', 'opacity-0');
+  }, 3000);
+}
+
+// =====================================================================
+// PDF UPLOAD & EXTRACTION 
+// =====================================================================
+const uploadZone = document.getElementById('upload-zone');
+const pdfInput = document.getElementById('pdf-input');
+
+uploadZone.addEventListener('click', () => pdfInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+pdfInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+async function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.pdf')) { showToast('Please upload a PDF file', 'error'); return; }
+  document.getElementById('file-label').textContent = file.name;
+  
+  uploadZone.classList.add('hidden');
+  const progBar = document.getElementById('parse-progress');
+  progBar.classList.remove('hidden');
+  const pctText = document.getElementById('parse-pct');
+  const fill = progBar.querySelector('.fill');
+  
+  fill.style.width = '10%'; pctText.textContent = '10%';
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    const numPages = pdf.numPages;
+    let fullText = '';
+
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      const items = tc.items;
+      if (!items.length) continue;
+      
+      const lines = {};
+      items.forEach(item => {
+        const y = Math.round(item.transform[5]);
+        if (!lines[y]) lines[y] = [];
+        lines[y].push({x: item.transform[4], text: item.str});
+      });
+      const sortedYs = Object.keys(lines).map(Number).sort((a,b) => b - a);
+      sortedYs.forEach(y => {
+        const lineItems = lines[y].sort((a,b) => a.x - b.x);
+        fullText += lineItems.map(i => i.text).join('  ') + '\n';
+      });
+      fullText += '\n';
+      
+      const pct = Math.floor(10 + 60 * i / numPages);
+      fill.style.width = pct + '%';
+      pctText.textContent = pct + '%';
+    }
+
+    fill.style.width = '75%'; pctText.textContent = '75%';
+    fullText = fullText.replace(/[ \t]{3,}/g, '  ').replace(/\r\n/g, '\n');
+    allPairings = parseFullText(fullText);
+    fill.style.width = '90%'; pctText.textContent = '90%';
+
+    detectPairingMonth();
+    renderStats();
+    renderPairingTable();
+    
+    fill.style.width = '100%'; pctText.textContent = '100%';
+    setTimeout(() => { 
+      progBar.classList.add('hidden'); 
+      document.getElementById('stats-bar').classList.remove('hidden');
+      document.getElementById('filter-bar').classList.remove('hidden');
+      document.getElementById('filter-bar').classList.add('flex');
+      populateBaseFilter();
+    }, 500);
+    
+    saveData();
+    showToast(`Successfully parsed ${allPairings.length} pairings`);
+  } catch(err) {
+    progBar.classList.add('hidden');
+    uploadZone.classList.remove('hidden');
+    showToast('Error parsing PDF: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+function detectPairingMonth() {
+  for (const p of allPairings) {
+    if (p.operating_dates && p.operating_dates.length) {
+      const d = new Date(p.operating_dates[0] + 'T12:00:00');
+      pairingMonth = {year: d.getFullYear(), month: d.getMonth()};
+      return;
+    }
+  }
+}
+
+// =====================================================================
+// PAIRING PARSER
+// =====================================================================
+const MONTH_MAP = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+
+function timeStrToMinutes(s) {
+  if (!s || typeof s !== 'string') return NaN;
+  s = s.replace(/\([^)]*\)/g, '').trim();
+  let m = s.match(/^(\d+)\s*h\s*(\d{1,2})?$/i);
+  if (m) return parseInt(m[1])*60 + parseInt(m[2]||0);
+  m = s.match(/^(\d{1,3})h(\d{2})$/i);
+  if (m) return parseInt(m[1])*60 + parseInt(m[2]);
+  if (s.includes(':')) {
+    const parts = s.split(':');
+    if (parts.length===2 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1]))
+      return parseInt(parts[0])*60 + parseInt(parts[1]);
+  }
+  if (/^\d+$/.test(s)) return parseInt(s);
+  return NaN;
+}
+
+function parseBracketMask(mask) {
+  const nums = mask.match(/[01]/g);
+  if (!nums || nums.length < 7) return null;
+  const weekdays = new Set();
+  for (let i = 0; i < 7; i++) { if (nums[i]==='1') weekdays.add(i%7); }
+  return weekdays.size ? weekdays : null;
+}
+
+function parseUnderscoreMask(mask) {
+  mask = (mask||'').trim().slice(0,7).padEnd(7,'_');
+  const weekdays = new Set();
+  for (let i = 0; i < 7; i++) { if (mask[i]!=='_') weekdays.add(i%7); }
+  return weekdays.size ? weekdays : null;
+}
+
+function determineEffectiveYear(block) {
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const moDay = block.match(/([A-Z]{3})\s+(\d{1,2})/i);
+  if (moDay) {
+    const mo = MONTH_MAP[moDay[1].toUpperCase()];
+    if (mo !== undefined) {
+      if (moDay[1].toUpperCase()==='JAN' && now.getMonth()===11) return curYear+1;
+      try {
+        const test = new Date(curYear, mo, parseInt(moDay[2]));
+        if (test < now) return curYear + 1;
+      } catch(e){}
+    }
+  }
+  return curYear;
+}
+
+function parseOperatingDates(block, effYear) {
+  const effIdx = block.toLowerCase().indexOf('effective');
+  if (effIdx === -1) return [];
+  const window = block.substring(Math.max(0, effIdx-200), effIdx+200);
+
+  const m = window.match(/([A-Z]{3})\s+(\d{1,2})\s*-\s*([A-Z]{3})\s+(\d{1,2})/i);
+  if (!m) return [];
+
+  const startMo = MONTH_MAP[m[1].toUpperCase()], startDay = parseInt(m[2]);
+  const endMo = MONTH_MAP[m[3].toUpperCase()], endDay = parseInt(m[4]);
+  if (startMo===undefined || endMo===undefined) return [];
+
+  let startDate = new Date(effYear, startMo, startDay);
+  let endDate = new Date(effYear, endMo, endDay);
+  if (endDate < startDate) endDate = new Date(effYear+1, endMo, endDay);
+
+  let maskWeekdays = null;
+  const bracket = window.match(/\[([^\]]+)\]/);
+  if (bracket) maskWeekdays = parseBracketMask(bracket[1]);
+  if (!maskWeekdays) {
+    const mbase = window.match(/\b[A-Z]{3}:\s*([0-9_]{1,7})/);
+    if (mbase) maskWeekdays = parseUnderscoreMask(mbase[1]);
+  }
+  if (!maskWeekdays) {
+    const mnear = window.match(/([0-9_]{1,7})\s+effective/i);
+    if (mnear) maskWeekdays = parseUnderscoreMask(mnear[1]);
+  }
+  if (!maskWeekdays) maskWeekdays = new Set([0,1,2,3,4,5,6]);
+
+  const exceptions = new Set();
+  const exMatch = window.match(/except\s+(.*)/i);
+  if (exMatch) {
+    const exStr = exMatch[1];
+    const mds = [...exStr.matchAll(/([A-Z]{3})\s+(\d{1,2})/gi)];
+    for (const md of mds) {
+      const mo = MONTH_MAP[md[1].toUpperCase()];
+      if (mo !== undefined) {
+        const d = new Date(effYear, mo, parseInt(md[2]));
+        if (d >= startDate && d <= endDate) exceptions.add(d.toISOString().slice(0,10));
+        const d2 = new Date(effYear+1, mo, parseInt(md[2]));
+        if (d2 >= startDate && d2 <= endDate) exceptions.add(d2.toISOString().slice(0,10));
+      }
+    }
+  }
+
+  const results = [];
+  let cur = new Date(startDate);
+  while (cur <= endDate) {
+    const dayOfWeek = cur.getDay(); 
+    const pyDay = (dayOfWeek + 6) % 7;
+    const ds = cur.toISOString().slice(0,10);
+    if (maskWeekdays.has(pyDay) && !exceptions.has(ds)) {
+      results.push(ds);
+    }
+    cur = new Date(cur.getTime() + 86400000);
+  }
+  return results;
+}
+
+function parseTripBlock(block) {
+  const trip = {};
+  trip.original_text = block;
+
+  let h = block.match(/TRIP\s*#\s*(\S+)\s+(\S+).*?\b([A-Z]{3})\b/i);
+  if (h) {
+    trip.trip_number = h[1]; trip.pairing_number = h[2]; trip.base = h[3].toUpperCase();
+  } else {
+    h = block.match(/TRIP\s*#\s*(\S+)\s+(\S+)/i);
+    if (h) { trip.trip_number = h[1]; trip.pairing_number = h[2]; trip.base = null; }
+    else return null;
+  }
+
+  const effYear = determineEffectiveYear(block);
+  trip.effective_year = effYear;
+  trip.operating_dates = parseOperatingDates(block, effYear);
+
+  const tafbM = block.match(/TAFB:\s*([\d+h\(\)\w:]+)/i);
+  if (tafbM) {
+    trip.tafb = tafbM[1].trim();
+    trip.tafb_minutes = timeStrToMinutes(trip.tafb);
+  }
+
+  const creditM = block.match(/Credit\s+Time:\s*([^\s,]+)/i);
+  trip.correctedcredit = 0; trip.credit_time_per_day = 0;
+  if (creditM) {
+    trip.credit_time = creditM[1].trim();
+    const cm = timeStrToMinutes(trip.credit_time);
+    if (!isNaN(cm)) { trip.credit_minutes = cm; trip.correctedcredit = Math.round(cm/60*100)/100; }
+  }
+
+  const perM = block.match(/PERDIEM:\s*([\d\.,]+)/i);
+  trip.correctedperdiem = 0;
+  if (perM) {
+    const pv = parseFloat(perM[1].replace(',',''));
+    if (!isNaN(pv)) { trip.per_diem = pv; trip.correctedperdiem = Math.ceil(pv/2); }
+  }
+
+  trip.days = {}; trip.layovers = []; trip.has_deadhead = false; trip.deadhead_legs = [];
+  const legRe = /\s+(\d{1,2})\s+([A-Z0-9_]{2,9})\s+([A-Z]{3})\s+([A-Z]{3})\s+(\d{2}:\d{2})\s+(\d{2}:\d{2})\s+([0-9]{1,3}h[0-9]{2}|[0-9]{1,2}:\d{2})/gi;
+  let lm;
+  while ((lm = legRe.exec(block)) !== null) {
+    const day = lm[1], fn = lm[2].toUpperCase(), dep = lm[3].toUpperCase(), arr = lm[4].toUpperCase();
+    const depT = lm[5], arrT = lm[6], blk = lm[7];
+    const dhPrefixes = ['DH','AC','UA','LIM9','AV','VB','AA'];
+    const isDH = dhPrefixes.some(p => fn.startsWith(p));
+    const displayFN = isDH ? '000DH' : fn;
+    const leg = {flight_number:displayFN, original_flight_number:fn, dep_station:dep, arr_station:arr, dep_time:depT, arr_time:arrT, duration:blk, is_deadhead:isDH};
+    if (!trip.days[day]) trip.days[day] = [];
+    trip.days[day].push(leg);
+    if (isDH) { trip.has_deadhead = true; trip.deadhead_legs.push(`${displayFN} ${dep} ${arr} ${depT} ${arrT} ${blk}`); }
+  }
+
+  trip.starts_or_ends_with_deadhead = false;
+  const sortedDays = Object.keys(trip.days).map(Number).sort((a,b)=>a-b);
+  if (sortedDays.length) {
+    const firstLegs = trip.days[String(sortedDays[0])];
+    if (firstLegs && firstLegs[0] && firstLegs[0].is_deadhead) trip.starts_or_ends_with_deadhead = true;
+    if (!trip.starts_or_ends_with_deadhead) {
+      const lastLegs = trip.days[String(sortedDays[sortedDays.length-1])];
+      if (lastLegs && lastLegs[lastLegs.length-1] && lastLegs[lastLegs.length-1].is_deadhead) trip.starts_or_ends_with_deadhead = true;
+    }
+  }
+
+  const layoverCue = /\b(hotel|overnight|layover)\b/i;
+  const layDurRe = /(\d{1,3}h\d{2})/i;
+  for (const line of block.split('\n')) {
+    const lmkr = line.match(/----\s+([A-Z]{3})\b/i);
+    if (lmkr && layoverCue.test(line)) {
+      const dmatch = line.match(layDurRe);
+      trip.layovers.push({location: lmkr[1].toUpperCase(), duration: dmatch ? dmatch[1] : 'N/A'});
+    } else if (layoverCue.test(line)) {
+      const aptAlt = line.match(/\b([A-Z]{3})\b/);
+      if (aptAlt) {
+        const dmatch = line.match(layDurRe);
+        if (dmatch) {
+          const mins = timeStrToMinutes(dmatch[1]);
+          if (!isNaN(mins) && mins >= 480) trip.layovers.push({location: aptAlt[1].toUpperCase(), duration: dmatch[1]});
+        } else {
+          trip.layovers.push({location: aptAlt[1].toUpperCase(), duration: 'N/A'});
+        }
+      }
+    }
+  }
+
+  trip.longest_layover = 0;
+  for (const lay of trip.layovers) {
+    const mins = timeStrToMinutes(lay.duration);
+    if (!isNaN(mins) && mins/60 > trip.longest_layover) trip.longest_layover = Math.round(mins/60*100)/100;
+  }
+
+  trip.days_of_work = sortedDays.length ? sortedDays[sortedDays.length-1] : 0;
+
+  if (trip.credit_minutes && trip.days_of_work > 0) {
+    trip.credit_time_per_day = Math.round((trip.credit_minutes / trip.days_of_work) / 60 * 100) / 100;
+  }
+
+  trip.calendar = [];
+  if (trip.operating_dates && trip.operating_dates.length && sortedDays.length) {
+    for (const startStr of trip.operating_dates) {
+      const startD = new Date(startStr + 'T12:00:00');
+      const inst = {};
+      for (const dayNum of sortedDays) {
+        const d = new Date(startD.getTime() + (dayNum-1)*86400000);
+        inst[String(dayNum)] = d.toLocaleDateString('en-US', {weekday:'short', day:'numeric', month:'short'});
+      }
+      trip.calendar.push(inst);
+    }
+  }
+
+  trip.all_dates = [];
+  if (trip.operating_dates && sortedDays.length) {
+    for (const startStr of trip.operating_dates) {
+      const startD = new Date(startStr + 'T12:00:00');
+      for (const dayNum of sortedDays) {
+        const d = new Date(startD.getTime() + (dayNum-1)*86400000);
+        trip.all_dates.push(d.toISOString().slice(0,10));
+      }
+    }
+  }
+
+  trip.is_redeye = false;
+  if (trip.days_of_work > 1 && trip.layovers.length >= 1) {
+    outer: for (const legs of Object.values(trip.days)) {
+      for (const leg of legs) {
+        const depMatch = leg.dep_time.match(/(\d{2}):(\d{2})/);
+        const arrMatch = leg.arr_time.match(/(\d{2}):(\d{2})/);
+        if (depMatch && arrMatch) {
+          const depM = parseInt(depMatch[1])*60+parseInt(depMatch[2]);
+          const arrM = parseInt(arrMatch[1])*60+parseInt(arrMatch[2]);
+          let has0200 = false;
+          if (depM <= arrM) has0200 = (depM <= 120 && arrM >= 120);
+          else has0200 = (arrM >= 120 || depM <= 120);
+          if (has0200) { trip.is_redeye = true; break outer; }
+        }
+      }
+    }
+  }
+
+  trip.is_lazy_pairing = false;
+  if (trip.days_of_work > 1) {
+    trip.is_lazy_pairing = Object.values(trip.days).every(d => d.length <= 1);
+  }
+
+  trip.is_weekday_only = true;
+  if (!trip.calendar.length) { trip.is_weekday_only = false; }
+  else {
+    for (const inst of trip.calendar) {
+      for (const ds of Object.values(inst)) {
+        if (ds.startsWith('Sat') || ds.startsWith('Sun')) { trip.is_weekday_only = false; break; }
+      }
+      if (!trip.is_weekday_only) break;
+    }
+  }
+
+  trip.is_commutable = false;
+  const rptM = block.match(/RPT.*?(\d{2}:\d{2})/);
+  const rlsM = block.match(/RLS.*?(\d{2}:\d{2})/);
+  if (rptM) { trip.report_time = rptM[1]; trip.report_minutes = timeStrToMinutes(rptM[1]); }
+  if (rlsM) { trip.release_time = rlsM[1]; trip.release_minutes = timeStrToMinutes(rlsM[1]); }
+  if ([3,4,5].includes(trip.days_of_work) && trip.report_minutes && trip.release_minutes) {
+    trip.is_commutable = (trip.report_minutes > 660 && trip.release_minutes < 1350);
+  }
+
+  trip.layover_cities = trip.layovers.map(l => l.location).join(', ');
+
+  let totalLegs = 0;
+  for (const d of Object.values(trip.days)) totalLegs += d.length;
+  trip.total_legs = totalLegs;
+
+  const routes = [];
+  for (const dayNum of sortedDays) {
+    const legs = trip.days[String(dayNum)];
+    for (const leg of legs) {
+      routes.push(leg.dep_station + '-' + leg.arr_station);
+    }
+  }
+  trip.route_summary = routes.join(' | ');
+
+  const P_ETOPS_APTS = new Set(['OGG','KOA','HNL','LIH']); 
+  const A_ETOPS_APTS = new Set(['AMS','EDI','DUB','LGW','LHR','CDG','KEF','FRA','MAN','BHX','FCO','BCN','MAD','LIS','ZRH','VIE','CPH','ARN','OSL','HEL','BRU','ATH','IST']); 
+  const allStations = new Set();
+  for (const legs of Object.values(trip.days)) {
+    for (const leg of legs) {
+      allStations.add(leg.dep_station);
+      allStations.add(leg.arr_station);
+    }
+  }
+  trip.is_p_etops = [...allStations].some(s => P_ETOPS_APTS.has(s));
+  trip.is_a_etops = [...allStations].some(s => A_ETOPS_APTS.has(s));
+
+  return trip;
+}
+
+function parsePrelimBlock(block) {
+  const lines = block.trim().split('\n').filter(l => l.trim());
+  if (!lines.length) return null;
+  const head = lines[0];
+
+  const mReal = block.match(/TRIP\s*#\s*(\S+)\s+(\S+)/i);
+  let fakeTrip, fakePairing, isPrelim;
+
+  const mBaseMask = head.match(/\b([A-Z]{3}):\s*([0-9_]{1,7})/);
+  let baseCode = 'XX';
+  if (mBaseMask) baseCode = mBaseMask[1].toUpperCase();
+  else { const mc = head.match(/^\s*([A-Z]{3})/); if (mc) baseCode = mc[1].toUpperCase(); }
+
+  if (mReal) { fakeTrip = mReal[1]; fakePairing = mReal[2]; isPrelim = false; }
+  else { fakeTrip = baseCode; fakePairing = 'P' + String(Math.abs(hashCode(block)) % 1000000).padStart(6,'0'); isPrelim = true; }
+
+  const mEff = head.match(/(effective.*)$/i);
+  const effClause = mEff ? mEff[1] : 'effective AUTO';
+  const fakeHeader = `TRIP #${fakeTrip}  ${fakePairing}  (${baseCode}) ${baseCode}: _______ ${effClause}`;
+  const trip = parseTripBlock(fakeHeader + '\n' + block);
+  if (trip && isPrelim) trip.is_prelim = true;
+  return trip;
+}
+
+function hashCode(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+  return h;
+}
+
+function stripCoverPages(text) {
+  const idx1 = text.toLowerCase().indexOf('trip #');
+  const idx2 = text.toLowerCase().indexOf('effective ');
+  const candidates = [idx1, idx2].filter(i => i !== -1);
+  const idx = candidates.length ? Math.min(...candidates) : 0;
+  return idx > 0 ? text.substring(idx) : text;
+}
+
+function parseFullText(content) {
+  content = stripCoverPages(content);
+  const tripBlocks = content.split(/(?=\bTRIP\s*#)/i);
+  const parsed = [];
+  const prelimBlocks = [];
+
+  for (const b of tripBlocks) {
+    if (/TRIP/i.test(b) && (/TAFB/i.test(b) || /Credit Time/i.test(b) || /PERDIEM/i.test(b))) {
+      const p = parseTripBlock(b);
+      if (p) parsed.push(p);
+    } else {
+      prelimBlocks.push(b);
+    }
+  }
+
+  for (const b of prelimBlocks) {
+    const frags = b.split(/(?=^[ \t]*[A-Z]{3,}.*?effective\s+[A-Z]{3}\s+\d{1,2})/mi);
+    for (const frag of frags) {
+      if (/effective/i.test(frag) && (/TAFB/i.test(frag) || /Credit Time/i.test(frag) || /\d{1,2}\s+[A-Z0-9_]{2,9}\s+[A-Z]{3}\s+[A-Z]{3}/i.test(frag))) {
+        const p = parsePrelimBlock(frag);
+        if (p) {
+          const isDup = parsed.some(item => item.trip_number === p.trip_number && item.pairing_number === p.pairing_number);
+          if (!isDup) parsed.push(p);
+        }
+      }
+    }
+  }
+
+  return parsed;
+}
+
+// =====================================================================
+// FORMATTERS & NEW WINDOW HANDLER
+// =====================================================================
+function openPairingWindow(text, title) {
+  const win = window.open('', '_blank', 'width=800,height=700');
+  if (!win) {
+    showToast('Popup blocked! Please allow popups for this site.', 'error');
+    return;
+  }
+  
+  const isDark = document.documentElement.classList.contains('dark');
+  const bg = isDark ? '#0f172a' : '#f8fafc';
+  const fg = isDark ? '#e2e8f0' : '#334155';
+  const border = isDark ? '#334155' : '#cbd5e1';
+  const preBg = isDark ? '#1e293b' : '#ffffff';
+  
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${title}</title>
+      <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: ${bg}; color: ${fg}; padding: 2rem; margin: 0; line-height: 1.6; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+        h2 { margin: 0; font-size: 1.5rem; color: ${isDark ? '#fff' : '#000'}; }
+        .copy-btn { background: #0ea5e9; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: background 0.2s; }
+        .copy-btn:hover { background: #0284c7; }
+        hr { border: 0; border-top: 1px solid ${border}; margin: 0 0 1.5rem 0; }
+        pre { background: ${preBg}; border: 1px solid ${border}; padding: 1.5rem; border-radius: 0.75rem; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>${title}</h2>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText(document.querySelector('pre').innerText); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy Text', 2000);">Copy Text</button>
+      </div>
+      <hr />
+      <pre>${text}</pre>
+    </body>
+    </html>
+  `);
+  win.document.close();
+}
+
+function flightsFormatter(cell) {
+  const p = cell.getData()._raw;
+  if (!p || !p.days) return '';
+  let rows = [];
+  const sortedDays = Object.keys(p.days).map(Number).sort((a,b)=>a-b);
+  for (const dayNum of sortedDays) {
+    for (const leg of p.days[String(dayNum)]) {
+       rows.push(`
+         <div class="flex items-center gap-1.5 w-max text-slate-800 dark:text-slate-300 py-0.5">
+           <span class="font-medium w-12 truncate">${leg.flight_number || ''}</span>
+           <span class="w-8">${leg.dep_station || ''}</span>
+           <span class="w-8">${leg.arr_station || ''}</span>
+           <span class="w-10">${leg.dep_time || ''}</span>
+           <span class="w-10">${leg.arr_time || ''}</span>
+           <span class="text-slate-500 w-10 text-right">${leg.duration || ''}</span>
+         </div>
+       `);
+    }
+  }
+  return `<div class="text-[11px] leading-tight flex flex-col tracking-tight">${rows.join('')}</div>`;
+}
+
+function layoversFormatter(cell) {
+  const p = cell.getData()._raw;
+  if (!p || !p.layovers || p.layovers.length === 0) return '';
+  let rows = p.layovers.map(l => `
+    <div class="flex justify-between items-center gap-4 w-full py-0.5">
+      <span class="font-medium text-slate-800 dark:text-slate-300">${l.location||''}</span>
+      <span class="text-slate-500">${l.duration||'N/A'}</span>
+    </div>
+  `);
+  return `<div class="text-[11px] leading-tight flex flex-col tracking-tight">${rows.join('')}</div>`;
+}
+
+// =====================================================================
+// STATS & TABLE
+// =====================================================================
+function renderStats() {
+  const bar = document.getElementById('stats-bar');
+  const total = allPairings.length;
+  const redeyes = allPairings.filter(p => p.is_redeye).length;
+  const lazy = allPairings.filter(p => p.is_lazy_pairing).length;
+  const commutable = allPairings.filter(p => p.is_commutable).length;
+  const dh = allPairings.filter(p => p.has_deadhead).length;
+  const avgCredit = total ? (allPairings.reduce((s,p) => s + (p.correctedcredit||0), 0) / total).toFixed(1) : 0;
+  
+  const StatCard = (label, val, icon, colorKey) => {
+    const styles = {
+      brand: 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400',
+      emerald: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+      blue: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      amber: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400',
+      purple: 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400',
+      rose: 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+    };
+    const colorClass = styles[colorKey] || styles.brand;
+    
+    return `
+      <div class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">${label}</div>
+          <div class="text-xl font-bold text-slate-900 dark:text-white">${val}</div>
+        </div>
+        <div class="p-2 rounded-lg ${colorClass}">
+          <i data-lucide="${icon}" class="w-5 h-5"></i>
+        </div>
+      </div>
+    `;
+  };
+
+  bar.innerHTML = `
+    ${StatCard('Total Pairings', total, 'layers', 'brand')}
+    ${StatCard('Avg Credit', avgCredit + 'h', 'clock', 'emerald')}
+    ${StatCard('Commutable', commutable, 'car', 'blue')}
+    ${StatCard('Lazy Trips', lazy, 'coffee', 'amber')}
+    ${StatCard('Redeyes', redeyes, 'moon', 'purple')}
+    ${StatCard('Deadheads', dh, 'users', 'rose')}
+  `;
+  lucide.createIcons();
+}
+
+function timeInputToMins(val) {
+  if (!val) return NaN;
+  const [h, m] = val.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function populateBaseFilter() {
+  const select = document.getElementById('filter-base');
+  if (!select) return;
+  
+  const bases = [...new Set(allPairings.map(p => p.base).filter(b => b))].sort();
+  const current = select.value; 
+  
+  select.innerHTML = '<option value="">All Bases</option>' + 
+                     bases.map(b => `<option value="${b}">${b}</option>`).join('');
+                     
+  if (bases.includes(current)) {
+    select.value = current;
+  }
+}
+
+function renderPairingTable() {
+  _detailsCache = [];
+  const data = allPairings.map(p => {
+    const didx = _detailsCache.length;
+    _detailsCache.push({text: p.original_text || '(no raw text stored)', title: `Trip ${p.trip_number} / ${p.pairing_number}`});
+    return {
+      detail_idx: didx,
+      trip: p.trip_number,
+      pairing: p.pairing_number,
+      date: (p.operating_dates && p.operating_dates.length > 0) ? p.operating_dates[0] : '',
+      base: p.base || '',
+      days: p.days_of_work,
+      tafb: p.tafb || '',
+      credit: p.credit_time || '',
+      credit_hrs: p.correctedcredit,
+      credit_per_day: p.credit_time_per_day,
+      per_diem: p.correctedperdiem,
+      legs: p.total_legs,
+      layovers: p.layover_cities,
+      longest_lay: p.longest_layover,
+      redeye: p.is_redeye ? 'Yes' : '',
+      lazy: p.is_lazy_pairing ? 'Yes' : '',
+      commutable: p.is_commutable ? 'Yes' : '',
+      deadhead: p.has_deadhead ? 'Yes' : '',
+      weekday: p.is_weekday_only ? 'Yes' : '',
+      p_etops: p.is_p_etops ? 'Yes' : '',
+      a_etops: p.is_a_etops ? 'Yes' : '',
+      route: p.route_summary,
+      dates: (p.operating_dates||[]).length,
+      report: p.report_time || '',
+      release: p.release_time || '',
+      report_mins: p.report_minutes || 0,
+      release_mins: p.release_minutes || 0,
+      _raw: p
+    };
+  });
+
+  pairingTable = new Tabulator('#pairing-table', {
+    data: data,
+    layout: 'fitDataStretch',
+    movableColumns: true,
+    resizableColumns: true,
+    initialSort: [{column:'credit_hrs', dir:'desc'}],
+    rowClick: (e, row) => {
+      if (e.target.tagName === 'svg' || e.target.tagName === 'path' || e.target.closest('.pairing-link')) return;
+      addToBid(row.getData()._raw);
+    },
+    columns: [
+      {title:'Trip', field:'trip', width:60, frozen:true, headerFilter:true, visible: false},
+      {
+        title:'Pairing', field:'pairing', width:85, frozen:true, headerFilter:true, visible: true,
+        formatter: function(cell) {
+          return `<div class="pairing-link group text-brand-600 dark:text-brand-400 font-bold hover:underline cursor-pointer flex items-center gap-1.5" title="Click to view pairing details">${cell.getValue()} <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-50 group-hover:opacity-100 transition-opacity"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></div>`;
+        },
+        cellClick: function(e, cell) {
+          e.stopPropagation();
+          const raw = cell.getRow().getData()._raw;
+          if (raw) openPairingWindow(raw.original_text, `Trip ${raw.trip_number} / ${raw.pairing_number}`);
+        }
+      },
+      {title:'Date', field:'date', width:100, headerFilter:true, visible: true},
+      {title:'Base', field:'base', width:60, headerFilter:true, visible: false},
+      {title:'Days', field:'days', width:60, hozAlign:'center', sorter:'number', headerFilter:'number', headerFilterPlaceholder:'≥', headerFilterFunc:'>=', visible: true},
+      {title:'TAFB', field:'tafb', width:80, headerFilter:true, visible: false},
+      {title:'Credit', field:'credit', width:80, headerFilter:true, visible: true},
+      {title:'Cr Hrs', field:'credit_hrs', width:75, hozAlign:'right', sorter:'number', formatter:'money', formatterParams:{precision:1}, headerFilter:'number', headerFilterPlaceholder:'≥', headerFilterFunc:'>=', visible: false},
+      {title:'C/D', field:'credit_per_day', width:75, hozAlign:'right', sorter:'number', formatter:'money', formatterParams:{precision:1}, headerFilter:'number', headerFilterPlaceholder:'≥', headerFilterFunc:'>=', visible: true},
+      {title:'PerDiem', field:'per_diem', width:85, hozAlign:'right', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:0}, headerFilter:'number', headerFilterPlaceholder:'≥', headerFilterFunc:'>=', visible: false},
+      {title:'Legs', field:'legs', width:60, hozAlign:'center', sorter:'number', headerFilter:'number', headerFilterPlaceholder:'≤', headerFilterFunc:'<=', visible: false},
+      {title:'Layovers', field:'layovers', minWidth:120, headerFilter:true, formatter: layoversFormatter, visible: true},
+      {title:'Max Lay', field:'longest_lay', width:85, hozAlign:'right', sorter:'number', formatter:'money', formatterParams:{precision:1}, headerFilter:'number', headerFilterPlaceholder:'≥', headerFilterFunc:'>=', visible: true},
+      {title:'Redeye', field:'redeye', width:75, hozAlign:'center', formatter:flagFormatter, visible: false},
+      {title:'Lazy', field:'lazy', width:60, hozAlign:'center', formatter:flagFormatter, visible: false},
+      {title:'Cmte', field:'commutable', width:70, hozAlign:'center', formatter:flagFormatter, visible: false},
+      {title:'DH', field:'deadhead', width:50, hozAlign:'center', formatter:flagFormatter, visible: false},
+      {title:'WkDay', field:'weekday', width:75, hozAlign:'center', formatter:flagFormatter, visible: false},
+      {title:'P-ETOPS', field:'p_etops', width:85, hozAlign:'center',
+        formatter: cell => cell.getValue()==='Yes' ? '<span class="badge-p">P-ETOPS</span>' : '', visible: false},
+      {title:'A-ETOPS', field:'a_etops', width:85, hozAlign:'center',
+        formatter: cell => cell.getValue()==='Yes' ? '<span class="badge-a">A-ETOPS</span>' : '', visible: false},
+      {title:'Route', field:'route', minWidth:260, headerFilter:true, formatter: flightsFormatter, visible: true},
+      {title:'Ops', field:'dates', width:60, hozAlign:'center', sorter:'number', visible: false},
+      {title:'Report', field:'report', width:70, headerFilter:true, headerFilterPlaceholder:'HH:MM', visible: true},
+      {title:'Release', field:'release', width:70, headerFilter:true, headerFilterPlaceholder:'HH:MM', visible: true},
+    ]
+  });
+
+  document.getElementById('search-input').addEventListener('input', applyFilters);
+  document.getElementById('filter-base').addEventListener('change', applyFilters);
+  document.getElementById('filter-days').addEventListener('change', applyFilters);
+  document.getElementById('filter-rpt-after').addEventListener('change', applyFilters);
+  document.getElementById('filter-rls-before').addEventListener('change', applyFilters);
+  ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-weekday',
+   'filter-avoid-p-etops','filter-avoid-a-etops'].forEach(id => {
+    document.getElementById(id).addEventListener('change', applyFilters);
+  });
+  
+  document.addEventListener('click', e => {
+    if (_colPickerOpen && !document.getElementById('col-picker-wrap').contains(e.target)) {
+      document.getElementById('col-picker').classList.add('hidden');
+      _colPickerOpen = false;
+    }
+  });
+}
+
+function flagFormatter(cell) {
+  return cell.getValue() === 'Yes' ? '<span class="text-emerald-500 text-lg leading-none">●</span>' : '';
+}
+
+function applyFilters() {
+  if (!pairingTable) return;
+  pairingTable.clearFilter();
+
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  const base = document.getElementById('filter-base').value;
+  const days = document.getElementById('filter-days').value;
+  const rptAfter = document.getElementById('filter-rpt-after').value;
+  const rlsBefore = document.getElementById('filter-rls-before').value;
+  const avoidPEtops = document.getElementById('filter-avoid-p-etops').checked;
+  const avoidAEtops = document.getElementById('filter-avoid-a-etops').checked;
+
+  if (search) {
+    pairingTable.addFilter((data, params) => {
+      const q = params.q;
+      return (data.trip||'').toLowerCase().includes(q) ||
+             (data.pairing||'').toLowerCase().includes(q) ||
+             (data.route||'').toLowerCase().includes(q) ||
+             (data.layovers||'').toLowerCase().includes(q);
+    }, {q: search});
+  }
+
+  if (base) pairingTable.addFilter('base', '=', base);
+  if (days) pairingTable.addFilter('days', '=', parseInt(days));
+  if (document.getElementById('filter-redeye').checked) pairingTable.addFilter('redeye', '=', 'Yes');
+  if (document.getElementById('filter-lazy').checked) pairingTable.addFilter('lazy', '=', 'Yes');
+  if (document.getElementById('filter-commutable').checked) pairingTable.addFilter('commutable', '=', 'Yes');
+  if (document.getElementById('filter-deadhead').checked) pairingTable.addFilter('deadhead', '=', 'Yes');
+  if (document.getElementById('filter-weekday').checked) pairingTable.addFilter('weekday', '=', 'Yes');
+  if (avoidPEtops) pairingTable.addFilter('p_etops', '!=', 'Yes');
+  if (avoidAEtops) pairingTable.addFilter('a_etops', '!=', 'Yes');
+
+  const rptMins = timeInputToMins(rptAfter);
+  if (!isNaN(rptMins)) pairingTable.addFilter((data, p) => data.report_mins === 0 || data.report_mins >= p.m, {m: rptMins});
+
+  const rlsMins = timeInputToMins(rlsBefore);
+  if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.release_mins === 0 || data.release_mins <= p.m, {m: rlsMins});
+}
+
+// =====================================================================
+// GDO CALENDAR
+// =====================================================================
+function renderCalendar() {
+  const container = document.getElementById('calendar-container');
+  container.innerHTML = '';
+  if (!pairingMonth) {
+    const now = new Date();
+    renderMonthCard(container, now.getFullYear(), now.getMonth());
+    renderMonthCard(container, now.getFullYear(), now.getMonth()+1);
+  } else {
+    const prev = new Date(pairingMonth.year, pairingMonth.month - 1, 1);
+    const next = new Date(pairingMonth.year, pairingMonth.month + 1, 1);
+    renderMonthCard(container, prev.getFullYear(), prev.getMonth());
+    renderMonthCard(container, pairingMonth.year, pairingMonth.month);
+    renderMonthCard(container, next.getFullYear(), next.getMonth());
+  }
+  updateGDOSummary();
+}
+
+function renderMonthCard(container, year, month) {
+  const card = document.createElement('div');
+  card.className = 'bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-5 shadow-sm';
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  card.innerHTML = `<h3 class="text-center font-bold text-lg mb-4 text-slate-900 dark:text-white">${monthNames[month]} ${year}</h3>`;
+  
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-7 gap-1 text-center';
+
+  ['Mo','Tu','We','Th','Fr','Sa','Su'].forEach(d => {
+    const h = document.createElement('div');
+    h.className = 'text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2';
+    h.textContent = d;
+    grid.appendChild(h);
+  });
+
+  const firstDay = new Date(year, month, 1);
+  let startDow = (firstDay.getDay() + 6) % 7; 
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const today = new Date().toISOString().slice(0,10);
+
+  const pairingDates = new Set();
+  for (const p of allPairings) {
+    for (const d of (p.all_dates||[])) {
+      if (d.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)) pairingDates.add(d);
+    }
+  }
+
+  for (let i = 0; i < startDow; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-day empty';
+    grid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cell = document.createElement('div');
+    cell.className = 'cal-day bg-slate-50 dark:bg-dark-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-dark-700 dark:hover:text-white';
+    cell.textContent = d;
+    cell.dataset.date = ds;
+
+    if (ds === today) cell.classList.add('today');
+    if (gdoDays.has(ds)) cell.classList.add('gdo');
+    else if (pairingDates.has(ds)) cell.classList.add('pairing-day');
+
+    cell.addEventListener('click', () => toggleGDO(ds));
+    grid.appendChild(cell);
+  }
+
+  card.appendChild(grid);
+  container.appendChild(card);
+}
+
+function toggleGDO(dateStr) {
+  if (gdoDays.has(dateStr)) gdoDays.delete(dateStr);
+  else gdoDays.add(dateStr);
+  renderCalendar();
+  saveData();
+}
+
+function clearAllGDOs() {
+  gdoDays.clear();
+  renderCalendar();
+  saveData();
+  showToast('Cleared all GDO days');
+}
+
+function addGDOsFromText() {
+  const input = document.getElementById('gdo-text-input').value.trim();
+  if (!input) return;
+
+  const year = pairingMonth ? pairingMonth.year : new Date().getFullYear();
+  const month = pairingMonth ? pairingMonth.month : new Date().getMonth();
+
+  const isoDates = input.match(/\d{4}-\d{2}-\d{2}/g);
+  if (isoDates) {
+    isoDates.forEach(d => gdoDays.add(d));
+  } else {
+    const moMatch = input.match(/^([A-Z]{3})\s+/i);
+    let targetMonth = month;
+    let remaining = input;
+    if (moMatch) {
+      const mo = MONTH_MAP[moMatch[1].toUpperCase()];
+      if (mo !== undefined) targetMonth = mo;
+      remaining = input.substring(moMatch[0].length);
+    }
+
+    const parts = remaining.split(/[,\s]+/);
+    for (const part of parts) {
+      const range = part.match(/^(\d{1,2})-(\d{1,2})$/);
+      if (range) {
+        for (let d = parseInt(range[1]); d <= parseInt(range[2]); d++) {
+          gdoDays.add(`${year}-${String(targetMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+        }
+      } else if (/^\d{1,2}$/.test(part.trim())) {
+        const d = parseInt(part.trim());
+        gdoDays.add(`${year}-${String(targetMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      }
+    }
+  }
+
+  document.getElementById('gdo-text-input').value = '';
+  renderCalendar();
+  saveData();
+  showToast(`${gdoDays.size} GDO days set`);
+}
+
+function updateGDOSummary() {
+  const el = document.getElementById('gdo-summary');
+
+  if (!gdoDays.size) { 
+    el.innerHTML = 'No GDO days selected. Click calendar dates or use the quick add input above.'; 
+    return;
+  }
+  const sorted = [...gdoDays].sort();
+  const formatted = sorted.map(d => {
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+  });
+
+  let conflicts = 0;
+  for (const p of allPairings) {
+    if ((p.all_dates||[]).some(d => gdoDays.has(d))) conflicts++;
+  }
+
+  el.innerHTML = `
+    <div class="mb-1"><strong class="text-slate-900 dark:text-white">${gdoDays.size} Selected Days:</strong> <span class="text-brand-600 dark:text-brand-400">${formatted.join(', ')}</span></div>
+    <div><span class="text-rose-500 dark:text-rose-400 font-medium">${conflicts} pairings</span> conflict with your GDOs and will be excluded in the Bid Builder.</div>
+  `;
+}
+
+// =====================================================================
+// BID BUILDER
+// =====================================================================
+function applyPreset(mode) {
+  bidMode = mode;
+  
+  if (mode === 'lazy') {
+    bidWeights = { credit: 2, layover: 12, commutable: 10, redeye: 80 };
+  } else {
+    bidWeights = { credit: 8, layover: 0, commutable: 15, redeye: 60 };
+  }
+  
+  syncSlidersToWeights();
+  
+  document.querySelectorAll('.mode-toggle button').forEach(b => {
+    if (b.dataset.mode === mode) {
+      b.classList.add('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400');
+      b.classList.remove('text-slate-500', 'dark:text-slate-400');
+    } else {
+      b.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400');
+      b.classList.add('text-slate-500', 'dark:text-slate-400');
+    }
+  });
+  
+  saveData();
+  if (bidTable) runBidBuilder(false); 
+}
+
+function syncSlidersToWeights() {
+  ['credit', 'layover', 'commutable', 'redeye'].forEach(t => {
+    const el = document.getElementById(`weight-${t}`);
+    const valEl = document.getElementById(`val-${t}`);
+    if(el && valEl) {
+      el.value = bidWeights[t];
+      valEl.textContent = bidWeights[t];
+    }
+  });
+}
+
+function updateWeightLabels(type) {
+  document.getElementById(`val-${type}`).textContent = document.getElementById(`weight-${type}`).value;
+}
+
+function applyWeights() {
+  bidWeights.credit = parseInt(document.getElementById('weight-credit').value);
+  bidWeights.layover = parseInt(document.getElementById('weight-layover').value);
+  bidWeights.commutable = parseInt(document.getElementById('weight-commutable').value);
+  bidWeights.redeye = parseInt(document.getElementById('weight-redeye').value);
+  
+  document.querySelectorAll('.mode-toggle button').forEach(b => {
+    b.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400');
+    b.classList.add('text-slate-500', 'dark:text-slate-400');
+  });
+  
+  saveData();
+  if (bidTable) runBidBuilder(false); 
+}
+
+function scorePairing(p) {
+  const preferDays = parseInt(document.getElementById('prefer-days').value);
+  const tafbH = (p.tafb_minutes || 0) / 60;
+  const creditH = p.correctedcredit || 0;
+  let score = 0;
+
+  const w = bidWeights;
+
+  const efficiency = tafbH > 0 ? creditH / tafbH : 0;
+  score += efficiency * (w.credit * 25); 
+  score += creditH * w.credit;
+
+  score += (p.longest_layover || 0) * w.layover;
+
+  if (p.is_commutable) score += w.commutable;
+
+  if (p.is_redeye) score -= w.redeye;
+
+  if (p.is_lazy_pairing && w.layover > 5) score += w.layover * 2.5;
+
+  score -= (p.total_legs || 0) * 0.5;
+
+  if (preferDays > 0) {
+    const d = p.days_of_work;
+    if (d >= preferDays && d <= preferDays + 1) score += 60;
+    else if (d === preferDays - 1) score += 20;
+    else if (d <= 2) score -= 50;
+  }
+
+  score += Math.min((p.operating_dates||[]).length, 5) * 1.5;
+
+  return Math.round(score * 100) / 100;
+}
+
+function getEligiblePairings() {
+  const minLay = parseFloat(document.getElementById('filter-min-lay').value);
+  const maxLay = parseFloat(document.getElementById('filter-max-lay').value);
+  const minCredit = parseFloat(document.getElementById('filter-min-credit').value);
+
+  return allPairings.filter(p => {
+    if (gdoDays.size > 0 && (p.all_dates||[]).some(d => gdoDays.has(d))) return false;
+    if (!isNaN(minLay) && minLay > 0 && (p.longest_layover || 0) < minLay) return false;
+    if (!isNaN(maxLay) && maxLay > 0 && (p.longest_layover || 0) > maxLay) return false;
+    if (!isNaN(minCredit) && minCredit > 0 && (p.correctedcredit || 0) < minCredit) return false;
+    return true;
+  });
+}
+
+// =====================================================================
+// CALENDAR REST RULES (1-in-7, 3-in-17)
+// =====================================================================
+function checkRestRules(workingDates, pairings) {
+  if (workingDates.size === 0) return true;
+  const dates = Array.from(workingDates).sort();
+  const minDate = new Date(dates[0] + 'T12:00:00');
+  const maxDate = new Date(dates[dates.length - 1] + 'T12:00:00');
+  
+  // Create an evaluation array extending 6 days before and after the working window
+  const evaluateDates = [];
+  let cur = new Date(minDate.getTime() - 6 * 86400000);
+  const end = new Date(maxDate.getTime() + 6 * 86400000);
+  
+  while (cur <= end) {
+    evaluateDates.push(cur.toISOString().slice(0, 10));
+    cur = new Date(cur.getTime() + 86400000);
+  }
+  
+  // 1. Check 1-in-7 Rule (Must have at least one day off OR a layover >24h in every 7 day period)
+  for (let i = 0; i <= evaluateDates.length - 7; i++) {
+    const window7 = evaluateDates.slice(i, i + 7);
+    let hasOffDay = false;
+    let windowHasWork = false;
+    
+    for (const wd of window7) {
+      if (!workingDates.has(wd)) {
+        hasOffDay = true;
+      } else {
+        windowHasWork = true;
+      }
+    }
+    
+    if (windowHasWork && !hasOffDay) {
+      let hasLongLayover = false;
+      for (const p of pairings) {
+        if (p.longest_layover >= 24) {
+          if (p.all_dates && p.all_dates.some(pd => window7.includes(pd))) {
+            hasLongLayover = true;
+            break;
+          }
+        }
+      }
+      if (!hasLongLayover) return false;
+    }
+  }
+  
+  // 2. Check 3-in-17 Rule (Must have 3 consecutive days off in every 17 day period)
+  for (let i = 0; i <= evaluateDates.length - 17; i++) {
+    const window17 = evaluateDates.slice(i, i + 17);
+    let windowHasWork = false;
+    for(const wd of window17) {
+        if(workingDates.has(wd)) windowHasWork = true;
+    }
+    
+    if (windowHasWork) {
+        let maxConsecutiveOff = 0;
+        let currentConsecutiveOff = 0;
+        
+        for (const wd of window17) {
+          if (!workingDates.has(wd)) {
+            currentConsecutiveOff++;
+            if (currentConsecutiveOff > maxConsecutiveOff) maxConsecutiveOff = currentConsecutiveOff;
+          } else {
+            currentConsecutiveOff = 0;
+          }
+        }
+        if (maxConsecutiveOff < 3) return false;
+    }
+  }
+  
+  return true;
+}
+
+
+function evaluatePairingGuardrails(p) {
+    p.warnings = [];
+    let isPairingLegal = true;
+    
+    if (p.layovers && p.layovers.length > 0) {
+      for (const lay of p.layovers) {
+        const layMins = timeStrToMinutes(lay.duration);
+        if (isNaN(layMins)) continue;
+        
+        const layHours = layMins / 60;
+        const pairingBase = p.base || null; 
+        const isHome = pairingBase && lay.location === pairingBase;
+        const restLocation = isHome ? "HOME" : "AWAY";
+        
+        const res = LegalityGuardrails.evaluate({
+          "rest.hours": layHours,
+          "rest.minimum_hours": layHours,
+          "rest.location": restLocation,
+          "pilot.is_reserve": pilotState.is_reserve,
+          "pilot.has_additional_reserve_days": pilotState.has_additional_reserve_days
+        }, "REST_EVALUATION");
+        
+        if (res.overall_status === 'FAIL') isPairingLegal = false; 
+        if (res.overall_status === 'WARN') p.warnings.push(...res.violations);
+      }
+    }
+    
+    if (p.days) {
+        Object.keys(p.days).forEach(dayNum => {
+           const legs = p.days[dayNum];
+           if (!legs || legs.length === 0) return;
+           
+           const firstLeg = legs[0];
+           const lastLeg = legs[legs.length - 1];
+           
+           let totalBlockMins = 0;
+           legs.forEach(l => {
+             const [h, m] = (l.duration||"0h00").split(/[h:]/).map(Number);
+             totalBlockMins += (h * 60) + (m || 0);
+           });
+           
+           const numFlights = legs.length;
+           const avgBlockMins = totalBlockMins / numFlights;
+           
+           let avgBucket = 'a_ge50';
+           if (avgBlockMins < 30) avgBucket = 'a_lt30';
+           else if (avgBlockMins < 50) avgBucket = 'a_30_49';
+
+           let flightBucket = "1-4";
+           if (avgBucket === 'a_lt30') {
+             if (numFlights <= 11) flightBucket = "1-11";
+             else if (numFlights <= 17) flightBucket = "12-17";
+             else flightBucket = "18+";
+           } else if (avgBucket === 'a_30_49') {
+             if (numFlights <= 7) flightBucket = "1-7";
+             else if (numFlights <= 11) flightBucket = "8-11";
+             else flightBucket = "12+";
+           } else {
+             if (numFlights <= 4) flightBucket = "1-4";
+             else if (numFlights <= 6) flightBucket = "5-6";
+             else flightBucket = "8+"; 
+           }
+
+           const rptMinsRaw = timeStrToMinutes(firstLeg.dep_time) - 60;
+           const rlsMins = timeStrToMinutes(lastLeg.arr_time) + 15;
+           let fdpHours = (rlsMins - rptMinsRaw) / 60;
+           if (fdpHours < 0) fdpHours += 24; 
+           
+           let actualRptMins = rptMinsRaw < 0 ? rptMinsRaw + 1440 : rptMinsRaw;
+           const rptH = Math.floor(actualRptMins / 60) % 24;
+           const rptM = actualRptMins % 60;
+           const startTimeStr = String(rptH).padStart(2, '0') + String(rptM).padStart(2, '0');
+
+           const fdpRes = LegalityGuardrails.evaluate({
+              "duty.fdp": fdpHours,
+              "duty.start_time_acclimatized": startTimeStr,
+              "duty.avg_flight_time_bucket": avgBucket,
+              "duty.flights_bucket": flightBucket
+           }, "DUTY_BUILD_OR_EVAL");
+
+           if (fdpRes.overall_status === 'FAIL') isPairingLegal = false; 
+           if (fdpRes.overall_status === 'WARN') p.warnings.push(...fdpRes.violations);
+        });
+    }
+
+    const uniqWarns = new Map();
+    p.warnings.forEach(w => uniqWarns.set(w.rule_id, w));
+    p.warnings = Array.from(uniqWarns.values());
+
+    return isPairingLegal;
+}
+
+
+function runBidBuilder(autoFill = false) {
+  const eligible = getEligiblePairings();
+  const seen = new Map();
+  for (const p of eligible) {
+    const key = p.pairing_number;
+    if (!seen.has(key) || (p.operating_dates||[]).length > (seen.get(key).operating_dates||[]).length) {
+      seen.set(key, p);
+    }
+  }
+  let unique = [...seen.values()];
+
+  // BA NOTE 1: Base missing fallback (known limitation)
+  // If base is unknown (null), we default to AWAY rest. HOME warnings may be missed (12h threshold).
+  // This choice is intentional to reduce false positives until base extraction is reliable.
+  
+  // BA NOTE 2: Real runtime proof limitation
+  // Validation verified using representative parsed objects; final verification against live PDF parse required when base/location fields are confirmed stable.
+
+  unique = unique.filter(p => evaluatePairingGuardrails(p));
+
+  const scored = unique.map(p => ({...p, bid_score: scorePairing(p)}));
+  scored.sort((a,b) => b.bid_score - a.bid_score);
+
+  const data = scored.map((p, i) => ({
+    rank: i + 1,
+    trip: p.trip_number,
+    pairing: p.pairing_number,
+    date: (p.operating_dates && p.operating_dates.length > 0) ? p.operating_dates[0] : '',
+    days: p.days_of_work,
+    tafb: p.tafb || '',
+    credit: p.credit_time || '',
+    credit_hrs: Math.round((p.correctedcredit||0)*10)/10,
+    credit_per_day: Math.round((p.credit_time_per_day||0)*10)/10,
+    per_diem: Math.round(p.correctedperdiem||0),
+    layovers: p.layover_cities,
+    longest_lay: Math.round((p.longest_layover||0)*10)/10,
+    score: p.bid_score,
+    redeye: p.is_redeye ? 'Yes' : '',
+    lazy: p.is_lazy_pairing ? 'Yes' : '',
+    route: p.route_summary,
+    dates: (p.operating_dates||[]).length,
+    report: p.report_time || '',
+    release: p.release_time || '',
+    warnings: p.warnings || [],
+    _raw: p
+  }));
+
+  if (bidTable) bidTable.destroy();
+  const maxScore = data.length ? data[0].score : 1;
+  bidTable = new Tabulator('#bid-table', {
+    data: data,
+    layout: 'fitDataStretch',
+    movableColumns: true,
+    resizableColumns: true,
+    initialSort: [{column:'score', dir:'desc'}],
+    rowClick: (e, row) => {
+      if (e.target.tagName === 'svg' || e.target.tagName === 'path' || e.target.closest('.pairing-link')) return;
+      addToBid(row.getData()._raw)
+    },
+    columns: [
+      {title:'#', field:'rank', width:40, hozAlign:'center', sorter:'number', visible: true},
+      {
+        title:'Pairing', field:'pairing', width:100, headerFilter:true, visible: true,
+        formatter: function(cell) {
+          const data = cell.getRow().getData();
+          const warnHtml = (data.warnings && data.warnings.length) ? `<div class="rule-warn-badge ml-2" title="${data.warnings.map(w=>w.rule_title).join('\n')}"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${data.warnings.length}</div>` : '';
+          return `<div class="flex items-center"><div class="pairing-link group text-brand-600 dark:text-brand-400 font-bold hover:underline cursor-pointer flex items-center gap-1.5" title="Click to view pairing details">${cell.getValue()} <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-50 group-hover:opacity-100 transition-opacity"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></div>${warnHtml}</div>`;
+        },
+        cellClick: function(e, cell) {
+          e.stopPropagation();
+          const raw = cell.getRow().getData()._raw;
+          if (raw) openPairingWindow(raw.original_text, `Trip ${raw.trip_number} / ${raw.pairing_number}`);
+        }
+      },
+      {title:'Date', field:'date', width:100, headerFilter:true, visible: true},
+      {title:'Days', field:'days', width:55, hozAlign:'center', sorter:'number', headerFilter:'number', headerFilterPlaceholder:'≥', headerFilterFunc:'>=', visible: true},
+      {title:'Score', field:'score', width:110, hozAlign:'right', sorter:'number', visible: true,
+        formatter: function(cell) {
+          const v = cell.getValue();
+          const pct = Math.max(0, Math.min(100, (v/Math.max(maxScore,1))*100));
+          return `
+            <div class="flex items-center gap-2 justify-end">
+              <span class="font-bold text-brand-400">${v}</span>
+              <div class="w-12 h-1.5 bg-slate-200 dark:bg-dark-700 rounded-full overflow-hidden">
+                <div class="h-full bg-brand-500 rounded-full" style="width:${pct}%"></div>
+              </div>
+            </div>`;
+        }
+      },
+      {title:'Credit', field:'credit', width:80, headerFilter:true, visible: true},
+      {title:'C/D', field:'credit_per_day', width:65, hozAlign:'right', sorter:'number', formatter:'money', formatterParams:{precision:1}, visible: true},
+      {title:'Max Lay', field:'longest_lay', width:75, hozAlign:'right', sorter:'number', formatter:'money', formatterParams:{precision:1}, visible: true},
+      {title:'Layovers', field:'layovers', minWidth:120, headerFilter:true, formatter: layoversFormatter, visible: true},
+      {title:'Route', field:'route', minWidth:260, headerFilter:true, formatter: flightsFormatter, visible: true},
+      {title:'Report', field:'report', width:70, headerFilter:true, headerFilterPlaceholder:'HH:MM', visible: true},
+      {title:'Release', field:'release', width:70, headerFilter:true, headerFilterPlaceholder:'HH:MM', visible: true},
+    ]
+  });
+
+  if (autoFill) {
+    bidList = [];
+    let totalDays = 0;
+    let totalCredit = 0;
+    let usedDates = new Set();
+    let workingDates = new Set();
+    let selectedPairings = [];
+    
+    // Inject GDOs at the very top of the list automatically
+    [...gdoDays].sort().forEach(d => {
+      if (bidList.length < MAX_BID_SLOTS) {
+        bidList.push({
+          is_gdo: true,
+          date: d,
+          trip_number: 'GDO',
+          pairing_number: 'GDO ' + new Date(d + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}),
+          days_of_work: 0,
+          credit_time: '0:00',
+          correctedcredit: 0,
+          correctedperdiem: 0,
+          longest_layover: 0,
+          warnings: []
+        });
+        usedDates.add(d);
+      }
+    });
+
+    // Fill remaining slots with top non-overlapping pairings representing a legal line (~75hrs, <=16 days)
+    for (const p of scored) {
+      if (bidList.length >= MAX_BID_SLOTS) break;
+      
+      const pCredit = p.correctedcredit || 0;
+      if (totalCredit + pCredit > 75) continue; // Do not exceed 75 hours
+      if (totalDays + p.days_of_work > 16) continue;
+
+      let overlaps = false;
+      if (p.all_dates) {
+          for (const d of p.all_dates) {
+              if (usedDates.has(d)) {
+                  overlaps = true;
+                  break;
+              }
+          }
+      }
+      if (overlaps) continue;
+      
+      // CHECK 1-in-7 and 3-in-17 Rest Rules
+      let testWorkingDates = new Set(workingDates);
+      if (p.all_dates) p.all_dates.forEach(d => testWorkingDates.add(d));
+      let testPairings = [...selectedPairings, p];
+      
+      if (!checkRestRules(testWorkingDates, testPairings)) continue;
+
+      // Successfully passed all checks
+      bidList.push(p);
+      selectedPairings.push(p);
+      totalDays += p.days_of_work;
+      totalCredit += pCredit;
+      if (p.all_dates) {
+          p.all_dates.forEach(d => {
+              usedDates.add(d);
+              workingDates.add(d);
+          });
+      }
+    }
+    
+    showToast(`Auto-filled GDOs and top non-overlapping pairings (within legal limits).`);
+  }
+
+  renderBidSlots();
+  saveData();
+}
+
+function replaceBid(index) {
+  const itemToReplace = bidList[index];
+  if (itemToReplace.is_gdo) return; // Unlikely, but protective
+
+  // 1. Calculate the theoretical state of the line WITHOUT this pairing
+  let tempDays = 0;
+  let tempCredit = 0;
+  let usedDates = new Set();
+  let workingDates = new Set();
+  let tempPairings = [];
+
+  bidList.forEach((p, i) => {
+      if (i === index) return; // Skip the one we are replacing
+      if (p.is_gdo) {
+          usedDates.add(p.date);
+      } else {
+          tempDays += (p.days_of_work || 0);
+          tempCredit += (p.correctedcredit || 0);
+          if (p.all_dates) {
+              p.all_dates.forEach(d => {
+                  usedDates.add(d);
+                  workingDates.add(d);
+              });
+          }
+          tempPairings.push(p);
+      }
+  });
+
+  // 2. Score and sort all eligible pairings
+  const eligible = getEligiblePairings();
+  const seen = new Map();
+  for (const p of eligible) {
+      const key = p.pairing_number;
+      if (!seen.has(key) || (p.operating_dates||[]).length > (seen.get(key).operating_dates||[]).length) {
+          seen.set(key, p);
+      }
+  }
+  let unique = [...seen.values()];
+  
+  // Apply legal filters
+  unique = unique.filter(p => evaluatePairingGuardrails(p));
+
+  const scored = unique.map(p => ({...p, bid_score: scorePairing(p)}));
+  scored.sort((a,b) => b.bid_score - a.bid_score);
+
+  // 3. Find the best replacement
+  let replacement = null;
+  for (const p of scored) {
+      // REQUIREMENT: Must have NO warnings to be a valid replacement
+      if (p.warnings && p.warnings.length > 0) continue;
+      
+      // Must fit the 75h / 16d constraints when added to the temp line
+      const pCredit = p.correctedcredit || 0;
+      if (tempCredit + pCredit > 75) continue;
+      if (tempDays + (p.days_of_work || 0) > 16) continue;
+
+      // Must not overlap with any existing dates in the temp line
+      let overlaps = false;
+      if (p.all_dates) {
+          for(const d of p.all_dates) { 
+            if (usedDates.has(d)) { overlaps = true; break; } 
+          }
+      }
+      if (overlaps) continue;
+
+      // Must not violate 1-in-7 or 3-in-17 rules
+      let testWorkingDates = new Set(workingDates);
+      if (p.all_dates) p.all_dates.forEach(d => testWorkingDates.add(d));
+      let testPairings = [...tempPairings, p];
+      
+      if (!checkRestRules(testWorkingDates, testPairings)) continue;
+
+      // Must not already be somewhere else in the bid list
+      if (bidList.some((b, i) => i !== index && !b.is_gdo && b.pairing_number === p.pairing_number)) continue;
+
+      replacement = p;
+      break;
+  }
+
+  if (replacement) {
+      bidList[index] = replacement;
+      renderBidSlots();
+      saveData();
+      showToast(`Replaced with valid, warning-free pairing: ${replacement.pairing_number}`);
+  } else {
+      showToast('No valid, warning-free replacement found that fits your line constraints.', 'error');
+  }
+}
+
+function showScheduleModal() {
+  document.getElementById('schedule-modal').classList.remove('hidden');
+  lucide.createIcons();
+
+  // Calculate KPIs for the Modal Header
+  const totalCredit = bidList.reduce((s, p) => s + (p.correctedcredit||0), 0);
+  const totalDays = bidList.reduce((s, p) => s + (p.days_of_work||0), 0);
+  let totalLayoverHours = 0;
+  bidList.forEach(p => {
+    if (!p.is_gdo && p.layovers) {
+      p.layovers.forEach(l => {
+        const m = timeStrToMinutes(l.duration);
+        if (!isNaN(m)) totalLayoverHours += m / 60;
+      });
+    }
+  });
+  const totalPerDiem = bidList.reduce((s, p) => s + (p.correctedperdiem||0), 0);
+
+  const kpiHtml = `
+      <div class="bg-white dark:bg-dark-800 p-3 rounded-lg border border-slate-200 dark:border-dark-700 flex-1 min-w-[120px]">
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Credit</div>
+          <div class="text-xl font-bold text-brand-600 dark:text-brand-400">${totalCredit.toFixed(1)}<span class="text-sm font-medium">h</span></div>
+      </div>
+      <div class="bg-white dark:bg-dark-800 p-3 rounded-lg border border-slate-200 dark:border-dark-700 flex-1 min-w-[120px]">
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Days Worked</div>
+          <div class="text-xl font-bold text-indigo-600 dark:text-indigo-400">${totalDays}</div>
+      </div>
+      <div class="bg-white dark:bg-dark-800 p-3 rounded-lg border border-slate-200 dark:border-dark-700 flex-1 min-w-[120px]">
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Layover Time</div>
+          <div class="text-xl font-bold text-amber-600 dark:text-amber-400">${totalLayoverHours.toFixed(1)}<span class="text-sm font-medium">h</span></div>
+      </div>
+      <div class="bg-white dark:bg-dark-800 p-3 rounded-lg border border-slate-200 dark:border-dark-700 flex-1 min-w-[120px]">
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mb-1">Per Diem (Your 1/2)</div>
+          <div class="text-xl font-bold text-emerald-600 dark:text-emerald-400">$${Math.round(totalPerDiem)}</div>
+      </div>
+  `;
+  document.getElementById('schedule-kpis').innerHTML = kpiHtml;
+
+  // Map dates to assigned items
+  const dateMap = new Map(); 
+  bidList.forEach(p => {
+      if (p.is_gdo) {
+          dateMap.set(p.date, { type: 'GDO', desc: 'GDO' });
+      } else if (p.all_dates) {
+          p.all_dates.forEach((d, idx) => {
+              dateMap.set(d, { type: 'PAIRING', desc: `${p.pairing_number} (Day ${idx+1})`, raw: p });
+          });
+      }
+  });
+
+  let dates = Array.from(dateMap.keys()).sort();
+  if (dates.length === 0) {
+      document.getElementById('schedule-calendar-container').innerHTML = '<p class="text-center text-slate-500 py-10">No schedule generated yet. Add bids or auto-generate first.</p>';
+      return;
+  }
+
+  let startD = new Date(dates[0] + 'T12:00:00');
+  let endD = new Date(dates[dates.length - 1] + 'T12:00:00');
+  
+  let startYear = startD.getFullYear();
+  let startMonth = startD.getMonth();
+  let endYear = endD.getFullYear();
+  let endMonth = endD.getMonth();
+
+  const container = document.getElementById('schedule-calendar-container');
+  container.innerHTML = '';
+
+  let curYear = startYear;
+  let curMonth = startMonth;
+
+  while (curYear < endYear || (curYear === endYear && curMonth <= endMonth)) {
+      const card = document.createElement('div');
+      card.className = 'bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl p-5 shadow-sm mb-6';
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      card.innerHTML = `<h3 class="text-center font-bold text-lg mb-4 text-slate-900 dark:text-white">${monthNames[curMonth]} ${curYear}</h3>`;
+      
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-7 gap-2 text-center';
+
+      ['Mo','Tu','We','Th','Fr','Sa','Su'].forEach(d => {
+          const h = document.createElement('div');
+          h.className = 'text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2';
+          h.textContent = d;
+          grid.appendChild(h);
+      });
+
+      const firstDay = new Date(curYear, curMonth, 1);
+      let startDow = (firstDay.getDay() + 6) % 7; 
+      const daysInMonth = new Date(curYear, curMonth+1, 0).getDate();
+
+      for (let i = 0; i < startDow; i++) {
+          const empty = document.createElement('div');
+          grid.appendChild(empty);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+          const ds = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const cell = document.createElement('div');
+          cell.className = 'border border-slate-200 dark:border-dark-700 rounded-lg p-2 min-h-[80px] flex flex-col items-start justify-start text-left bg-white dark:bg-dark-800 shadow-sm';
+          
+          let dayNumHtml = `<span class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">${d}</span>`;
+          let contentHtml = '';
+
+          if (dateMap.has(ds)) {
+              const info = dateMap.get(ds);
+              if (info.type === 'GDO') {
+                  cell.classList.add('!bg-emerald-50', 'dark:!bg-emerald-900/20', '!border-emerald-200', 'dark:!border-emerald-800');
+                  dayNumHtml = `<span class="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-1">${d}</span>`;
+                  contentHtml = `<div class="text-xs font-bold text-emerald-600 dark:text-emerald-500 flex items-center gap-1 w-full mt-auto"><i data-lucide="calendar-off" class="w-3.5 h-3.5"></i> GDO</div>`;
+              } else {
+                  cell.classList.add('!bg-brand-50', 'dark:!bg-brand-900/20', '!border-brand-200', 'dark:!border-brand-800');
+                  dayNumHtml = `<span class="text-xs font-bold text-brand-700 dark:text-brand-400 mb-1">${d}</span>`;
+                  contentHtml = `
+                      <div class="text-xs font-bold text-brand-700 dark:text-brand-300 w-full truncate mb-0.5" title="${info.desc}">${info.desc}</div>
+                      <div class="text-[10px] text-brand-600/80 dark:text-brand-400/80 truncate font-mono">${info.raw.layover_cities ? info.raw.layover_cities.split(', ')[0] : 'Turn'}</div>
+                  `;
+              }
+          }
+
+          cell.innerHTML = dayNumHtml + contentHtml;
+          grid.appendChild(cell);
+      }
+
+      card.appendChild(grid);
+      container.appendChild(card);
+
+      curMonth++;
+      if (curMonth > 11) {
+          curMonth = 0;
+          curYear++;
+      }
+  }
+  lucide.createIcons();
+}
+
+function initBidTable() {
+  if (!allPairings.length) return;
+  if (!bidTable) {
+    runBidBuilder(true); 
+  } else {
+    renderBidSlots();
+  }
+}
+
+function addToBid(pairing) {
+  if (bidList.length >= MAX_BID_SLOTS) { showToast('Bid list full (16 slots max)', 'error'); return; }
+  if (bidList.some(b => !b.is_gdo && b.trip_number === pairing.trip_number && b.pairing_number === pairing.pairing_number)) {
+    showToast('Already in bid list', 'error'); return;
+  }
+  bidList.push(pairing);
+  renderBidSlots();
+  saveData();
+  showToast(`Added ${pairing.pairing_number} to bid slot #${bidList.length}`);
+}
+
+function removeFromBid(index) {
+  bidList.splice(index, 1);
+  renderBidSlots();
+  saveData();
+}
+
+function renderBidSlots() {
+  const container = document.getElementById('bid-slots');
+  const countEl = document.getElementById('bid-count');
+  countEl.textContent = `${bidList.length}/${MAX_BID_SLOTS} slots`;
+  
+  if (bidList.length === MAX_BID_SLOTS) {
+    countEl.classList.remove('text-slate-500', 'dark:text-slate-400');
+    countEl.classList.add('text-emerald-600', 'dark:text-emerald-400', 'border-emerald-200', 'dark:border-emerald-500/50', 'bg-emerald-50', 'dark:bg-emerald-500/10');
+  } else {
+    countEl.classList.add('text-slate-500', 'dark:text-slate-400');
+    countEl.classList.remove('text-emerald-600', 'dark:text-emerald-400', 'border-emerald-200', 'dark:border-emerald-500/50', 'bg-emerald-50', 'dark:bg-emerald-500/10');
+  }
+
+  if (!bidList.length) {
+    container.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center text-slate-500 p-8 text-center space-y-3">
+        <i data-lucide="list-plus" class="w-10 h-10 text-slate-300 dark:text-dark-600"></i>
+        <p class="text-sm">Your bid list is empty.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500">Click rows in the table to add them here, or use the Auto-Generate button above.</p>
+      </div>`;
+    document.getElementById('points-summary').innerHTML = '<span class="text-slate-400 dark:text-slate-500 italic text-sm">List is empty</span>';
+    document.getElementById('points-summary-mobile').innerHTML = '<span class="text-slate-400 dark:text-slate-500 italic text-sm">List is empty</span>';
+    lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = bidList.map((p, i) => {
+    if (p.is_gdo) {
+      return `
+      <div class="bid-item flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl mb-2 group transition-all cursor-move shadow-sm" draggable="true" data-idx="${i}">
+        <div class="flex flex-col items-center text-emerald-400 group-hover:text-emerald-600 transition-colors">
+          <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+          <span class="text-[10px] font-bold uppercase mt-1">#${i+1}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex justify-between items-baseline mb-1">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-emerald-800 dark:text-emerald-300 text-sm"><i data-lucide="calendar-off" class="w-4 h-4 inline pb-0.5"></i> Guaranteed Day Off</span>
+            </div>
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 px-1.5 py-0.5 rounded">${PBS_WEIGHTS[i] || 0} pts</span>
+          </div>
+          <div class="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+            ${new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'})}
+          </div>
+        </div>
+        <button class="text-emerald-400 hover:text-red-500 p-2 rounded-lg transition-colors" onclick="removeFromBid(${i})" title="Remove">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>`;
+    }
+
+    const warnHtml = (p.warnings && p.warnings.length) ? `<div class="rule-warn-badge ml-2" title="${p.warnings.map(w=>w.rule_title).join('\n')}"><i data-lucide="alert-triangle" class="w-3 h-3"></i> ${p.warnings.length}</div>` : '';
+    const replaceHtml = (p.warnings && p.warnings.length) ? `<button class="ml-2 text-brand-500 hover:text-brand-600 transition-colors bg-brand-50 hover:bg-brand-100 p-1 rounded" onclick="replaceBid(${i})" title="Auto-replace with a valid, rule-abiding pairing"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>` : '';
+
+    return `
+    <div class="bid-item flex items-center gap-3 p-3 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl mb-2 group transition-all cursor-move hover:border-slate-300 dark:hover:border-dark-600 shadow-sm" draggable="true" data-idx="${i}">
+      <div class="flex flex-col items-center text-slate-400 dark:text-dark-600 group-hover:text-brand-500 dark:group-hover:text-brand-400 transition-colors">
+        <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+        <span class="text-[10px] font-bold uppercase mt-1">#${i+1}</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between items-baseline mb-1">
+          <div class="flex items-center">
+            <span class="font-bold text-slate-900 dark:text-white text-sm truncate">${p.pairing_number}</span>
+            ${warnHtml}
+            ${replaceHtml}
+          </div>
+          <span class="text-xs font-mono text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-1.5 py-0.5 rounded">${PBS_WEIGHTS[i] || 0} pts</span>
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-400 truncate">
+          Start: ${((p.operating_dates && p.operating_dates[0]) || p.date || '').toString() || 'N/A'} • ${p.days_of_work}d • ${p.credit_time||'0:00'} cr • ${p.layover_cities ? p.layover_cities : 'No Layover'}
+        </div>
+      </div>
+      <button class="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 bg-slate-50 dark:bg-dark-900 hover:bg-red-50 dark:hover:bg-red-500/10 p-2 rounded-lg transition-colors border border-transparent hover:border-red-100 dark:hover:border-red-500/20" onclick="removeFromBid(${i})" title="Remove">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    </div>
+  `}).join('');
+  lucide.createIcons();
+
+  const items = container.querySelectorAll('.bid-item');
+  let dragIdx = null;
+  items.forEach(item => {
+    item.addEventListener('dragstart', e => { 
+      dragIdx = parseInt(item.dataset.idx); 
+      e.dataTransfer.effectAllowed = 'move'; 
+      setTimeout(() => item.classList.add('dragging'), 0);
+    });
+    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+    item.addEventListener('dragover', e => { 
+      e.preventDefault(); 
+      e.dataTransfer.dropEffect = 'move'; 
+      item.style.borderTop = dragIdx > parseInt(item.dataset.idx) ? '2px solid var(--brand-500)' : '';
+      item.style.borderBottom = dragIdx < parseInt(item.dataset.idx) ? '2px solid var(--brand-500)' : '';
+    });
+    item.addEventListener('dragleave', () => { item.style.borderTop = ''; item.style.borderBottom = ''; });
+    item.addEventListener('drop', e => {
+      e.preventDefault(); item.style.borderTop = ''; item.style.borderBottom = '';
+      const dropIdx = parseInt(item.dataset.idx);
+      if (dragIdx !== null && dragIdx !== dropIdx) {
+        const [moved] = bidList.splice(dragIdx, 1);
+        bidList.splice(dropIdx, 0, moved);
+        renderBidSlots();
+        saveData();
+      }
+    });
+  });
+
+  const totalPts = bidList.reduce((s, p, i) => s + (PBS_WEIGHTS[i] || 0), 0);
+  const maxPts = PBS_WEIGHTS.slice(0, MAX_BID_SLOTS).reduce((s, v) => s + v, 0);
+  
+  const totalCredit = bidList.reduce((s, p) => s + (p.correctedcredit||0), 0);
+  const totalDays = bidList.reduce((s, p) => s + (p.days_of_work||0), 0);
+  const totalPerDiem = bidList.reduce((s, p) => s + (p.correctedperdiem||0), 0);
+  
+  let totalLayoverHours = 0;
+  bidList.forEach(p => {
+    if (!p.is_gdo && p.layovers) {
+      p.layovers.forEach(l => {
+        const m = timeStrToMinutes(l.duration);
+        if (!isNaN(m)) totalLayoverHours += m / 60;
+      });
+    }
+  });
+
+  const numPairings = bidList.filter(p => !p.is_gdo).length || 1;
+  const avgCredit = (totalCredit / numPairings).toFixed(1);
+  const avgDays = (totalDays / numPairings).toFixed(1);
+  const avgLayover = (totalLayoverHours / numPairings).toFixed(1);
+  
+  const summaryHtml = `
+    <div class="flex items-center gap-1.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 px-2 py-1.5 rounded border border-brand-200 dark:border-brand-500/30 shadow-sm" title="Total Points">
+      <i data-lucide="award" class="w-3.5 h-3.5"></i>
+      <span class="font-bold text-xs">${totalPts} <span class="text-[10px] font-normal opacity-70">pts</span></span>
+    </div>
+    <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-slate-300 px-2 py-1.5 rounded border border-slate-200 dark:border-dark-600 shadow-sm" title="Credit: Total / Average">
+      <span class="text-[10px] uppercase tracking-wider opacity-70 font-semibold">Cr</span>
+      <span class="font-bold text-xs">${totalCredit.toFixed(1)}h <span class="text-[10px] font-normal opacity-70">tot</span> / ${avgCredit}h <span class="text-[10px] font-normal opacity-70">avg</span></span>
+    </div>
+    <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-slate-300 px-2 py-1.5 rounded border border-slate-200 dark:border-dark-600 shadow-sm" title="Days: Total / Average">
+      <span class="text-[10px] uppercase tracking-wider opacity-70 font-semibold">Days</span>
+      <span class="font-bold text-xs">${totalDays} <span class="text-[10px] font-normal opacity-70">tot</span> / ${avgDays} <span class="text-[10px] font-normal opacity-70">avg</span></span>
+    </div>
+    <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-dark-700 text-slate-700 dark:text-slate-300 px-2 py-1.5 rounded border border-slate-200 dark:border-dark-600 shadow-sm" title="Layover Hours: Total / Average">
+      <span class="text-[10px] uppercase tracking-wider opacity-70 font-semibold">Layover</span>
+      <span class="font-bold text-xs">${totalLayoverHours.toFixed(1)}h <span class="text-[10px] font-normal opacity-70">tot</span> / ${avgLayover}h <span class="text-[10px] font-normal opacity-70">avg</span></span>
+    </div>
+    <div class="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-1.5 rounded border border-emerald-200 dark:border-emerald-500/30 shadow-sm" title="Total Per Diem (Your Half)">
+      <span class="text-[10px] uppercase tracking-wider opacity-70 font-semibold">Per Diem (1/2)</span>
+      <span class="font-bold text-xs">$${Math.round(totalPerDiem)}</span>
+    </div>
+  `;
+
+  document.getElementById('points-summary').innerHTML = summaryHtml;
+  document.getElementById('points-summary-mobile').innerHTML = summaryHtml;
+  lucide.createIcons();
+}
+
+function exportBid() {
+  if (!bidList.length) { showToast('No pairings in bid list to export', 'error'); return; }
+  let text = 'WestJet PBS Bid List\n';
+  text += `Mode: ${bidMode === 'lazy' ? 'Lazy (Long Layovers)' : 'Efficient (Fast Flying)'}\n`;
+  text += `GDO Days: ${[...gdoDays].sort().join(', ') || 'None'}\n`;
+  text += '='.repeat(60) + '\n\n';
+
+  bidList.forEach((p, i) => {
+    if (p.is_gdo) {
+      text += `#${i+1} (${PBS_WEIGHTS[i] || 0}pts) — GUARANTEED DAY OFF\n`;
+      text += `  Date: ${p.date}\n\n`;
+    } else {
+      text += `#${i+1} (${PBS_WEIGHTS[i] || 0}pts) — Pairing ${p.pairing_number}\n`;
+      text += `  ${p.days_of_work}-day | Credit: ${p.credit_time||'N/A'} | TAFB: ${p.tafb||'N/A'} | PerDiem: $${p.correctedperdiem||0}\n`;
+      text += `  Layovers: ${p.layover_cities || 'None'} | Route: ${p.route_summary}\n`;
+      text += `  Dates: ${(p.operating_dates||[]).join(', ')}\n\n`;
+    }
+  });
+
+  text += '\nWings Bid Entry Order:\n';
+  bidList.forEach((p, i) => {
+    if (p.is_gdo) {
+      text += `Slot ${i+1}: Prefer Off ${p.date}\n`;
+    } else {
+      text += `Slot ${i+1}: Desire Pairing ${p.pairing_number}\n`;
+    }
+  });
+
+  const blob = new Blob([text], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `WestJet_Bid_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  showToast('Bid exported successfully!');
+}
+
+// =====================================================================
+// COLUMN VISIBILITY PICKER
+// =====================================================================
+function toggleColPicker(e) {
+  e.stopPropagation();
+  const picker = document.getElementById('col-picker');
+  _colPickerOpen = !_colPickerOpen;
+  
+  if (!_colPickerOpen || !pairingTable) {
+    picker.classList.add('hidden');
+    return;
+  }
+  
+  picker.innerHTML = '<div class="px-3 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-200 dark:border-dark-700">Toggle Columns</div>';
+  pairingTable.getColumns().forEach(col => {
+    const field = col.getField();
+    const title = col.getDefinition().title;
+    if (title === '') return;
+    
+    const label = document.createElement('label');
+    label.className = 'flex items-center gap-3 px-4 py-1.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-700 text-sm text-slate-700 dark:text-slate-300 transition-colors';
+    
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500';
+    cb.checked = col.isVisible();
+    cb.addEventListener('change', () => {
+      if (cb.checked) col.show(); else col.hide();
+    });
+    
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(title || field));
+    picker.appendChild(label);
+  });
+  
+  picker.classList.remove('hidden');
+}
+
+</script>
+</body>
+</html>
