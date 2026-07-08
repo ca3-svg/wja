@@ -382,6 +382,9 @@
                   <input type="checkbox" id="filter-deadhead" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Deadhead (DH)
                 </label>
                 <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="filter-favorites" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Favorite pairings only
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                   <input type="checkbox" id="filter-weekday" class="rounded border-slate-300 dark:border-dark-600 bg-white dark:bg-dark-900 text-brand-500 focus:ring-brand-500"> Weekday Only
                 </label>
                 <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer" title="Exclude Hawaii">
@@ -1321,6 +1324,7 @@ let bidProfile = {
 };
 let savedBidProfiles = {};
 let savedViewerViews = {};
+let favoritePairingKeys = [];
 let viewerQuickSettings = {
   lateStartAfter: '10:00',
   earlyFinishBefore: '18:00',
@@ -1331,6 +1335,32 @@ let viewerQuickSettings = {
 };
 let viewerDrawerCollapsed = false;
 let activePreferenceEdit = null;
+
+function getPairingKey(pairing) {
+  if (!pairing) return '';
+  const trip = String(pairing.trip_number || '').trim();
+  const pr = String(pairing.pairing_number || '').trim();
+  const date = Array.isArray(pairing.operating_dates) && pairing.operating_dates.length ? String(pairing.operating_dates[0] || '').trim() : '';
+  return `${trip}|${pr}|${date}`;
+}
+
+function isFavoritePairing(pairing) {
+  const key = getPairingKey(pairing);
+  return !!key && favoritePairingKeys.includes(key);
+}
+
+function toggleFavoritePairing(pairing) {
+  const key = getPairingKey(pairing);
+  if (!key) return;
+  const set = new Set(favoritePairingKeys);
+  const next = set.has(key) ? (set.delete(key), false) : (set.add(key), true);
+  favoritePairingKeys = [...set];
+  saveData();
+  renderPairingTable();
+  applyFilters();
+  if (bidTable) runBidBuilder(false);
+  showToast(next ? 'Added to favorites' : 'Removed from favorites');
+}
 
 // Sourced from user/app state (currently mock defaults until Reserve UI is built)
 let pilotState = {
@@ -1353,6 +1383,7 @@ function saveData() {
       bidProfile,
       savedBidProfiles,
       savedViewerViews,
+      favoritePairingKeys,
       viewerQuickSettings,
       viewerDrawerCollapsed
     };
@@ -1390,6 +1421,7 @@ function loadData() {
       }
       savedBidProfiles = data.savedBidProfiles || {};
       savedViewerViews = data.savedViewerViews || {};
+      favoritePairingKeys = Array.isArray(data.favoritePairingKeys) ? data.favoritePairingKeys : [];
       viewerQuickSettings = {
         lateStartAfter: data.viewerQuickSettings?.lateStartAfter || '10:00',
         earlyFinishBefore: data.viewerQuickSettings?.earlyFinishBefore || '18:00',
@@ -2544,6 +2576,7 @@ function getViewerFilterSnapshot() {
     lazy: !!document.getElementById('filter-lazy')?.checked,
     commutable: !!document.getElementById('filter-commutable')?.checked,
     deadhead: !!document.getElementById('filter-deadhead')?.checked,
+    favoritesOnly: !!document.getElementById('filter-favorites')?.checked,
     weekday: !!document.getElementById('filter-weekday')?.checked,
     noPEtops: !!document.getElementById('filter-avoid-p-etops')?.checked,
     noAEtops: !!document.getElementById('filter-avoid-a-etops')?.checked,
@@ -2572,6 +2605,7 @@ function applyViewerFilterSnapshot(snapshot = {}) {
   setChecked('filter-lazy', snapshot.lazy);
   setChecked('filter-commutable', snapshot.commutable);
   setChecked('filter-deadhead', snapshot.deadhead);
+  setChecked('filter-favorites', snapshot.favoritesOnly);
   setChecked('filter-weekday', snapshot.weekday);
   setChecked('filter-avoid-p-etops', snapshot.noPEtops);
   setChecked('filter-avoid-a-etops', snapshot.noAEtops);
@@ -2623,6 +2657,7 @@ function renderActiveFilterChips() {
   if (snapshot.lazy) addChip('Lazy', 'lazy');
   if (snapshot.commutable) addChip('Commutable', 'commutable');
   if (snapshot.deadhead) addChip('Deadhead', 'deadhead');
+  if (snapshot.favoritesOnly) addChip('Favorites only', 'favoritesOnly');
   if (snapshot.weekday) addChip('Weekday only', 'weekday');
   if (snapshot.noPEtops) addChip('No P-ETOPS', 'noPEtops');
   if (snapshot.noAEtops) addChip('No A-ETOPS', 'noAEtops');
@@ -2890,6 +2925,7 @@ function clearViewerFilter(key) {
   else if (key === 'lazy') clearChecked('filter-lazy');
   else if (key === 'commutable') clearChecked('filter-commutable');
   else if (key === 'deadhead') clearChecked('filter-deadhead');
+  else if (key === 'favoritesOnly') clearChecked('filter-favorites');
   else if (key === 'weekday') clearChecked('filter-weekday');
   else if (key === 'noPEtops') clearChecked('filter-avoid-p-etops');
   else if (key === 'noAEtops') clearChecked('filter-avoid-a-etops');
@@ -2907,7 +2943,7 @@ function clearViewerFilters() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-weekday','filter-avoid-p-etops','filter-avoid-a-etops'].forEach(id => {
+  ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-favorites','filter-weekday','filter-avoid-p-etops','filter-avoid-a-etops'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.checked = false;
   });
@@ -2964,6 +3000,8 @@ function toggleViewerShortcut(kind) {
     toggleChecked('filter-redeye');
   } else if (kind === 'deadhead') {
     toggleChecked('filter-deadhead');
+  } else if (kind === 'favoritesOnly') {
+    toggleChecked('filter-favorites');
   }
 
   syncViewerFilterUI();
@@ -3082,6 +3120,7 @@ function syncQuickFilterButtons() {
     snapshot.lazy ||
     snapshot.commutable ||
     snapshot.deadhead ||
+    snapshot.favoritesOnly ||
     snapshot.weekday ||
     snapshot.noPEtops ||
     snapshot.noAEtops ||
@@ -3095,6 +3134,7 @@ function syncQuickFilterButtons() {
       (action === 'redeye' && snapshot.redeye) ||
       (action === 'lazy' && snapshot.lazy) ||
       (action === 'commutable' && snapshot.commutable) ||
+      (action === 'favoritesOnly' && snapshot.favoritesOnly) ||
       (action === 'credit' && !!snapshot.minCredit) ||
       (action === 'reset' && !quickOn);
 
@@ -3125,6 +3165,7 @@ function renderPairingTable() {
       per_diem: p.correctedperdiem,
       legs: p.total_legs,
       max_legs_per_day: p.max_legs_per_day || 0,
+      favorite: isFavoritePairing(p) ? 'Yes' : '',
       layovers: p.layover_cities,
       shortest_lay: p.shortest_layover || 0,
       longest_lay: p.longest_layover,
@@ -3155,11 +3196,16 @@ function renderPairingTable() {
     resizableColumns: true,
     initialSort: [{column:'credit_hrs', dir:'desc'}],
     rowClick: (e, row) => {
-      if (e.target.tagName === 'svg' || e.target.tagName === 'path' || e.target.closest('.pairing-link')) return;
+      if (e.target.tagName === 'svg' || e.target.tagName === 'path' || e.target.closest('.pairing-link') || e.target.closest('.favorite-toggle')) return;
       addToBid(row.getData()._raw);
     },
     columns: [
       {title:'Trip', field:'trip', width:60, frozen:true, headerFilter:true, visible: false},
+      {
+        title:'Fav', field:'favorite', width:52, frozen:true, hozAlign:'center', visible: true,
+        formatter: cell => `<button type="button" class="favorite-toggle text-xl leading-none ${cell.getValue()==='Yes' ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'} hover:text-amber-500 transition-colors" title="${cell.getValue()==='Yes' ? 'Remove favorite' : 'Add favorite'}">${cell.getValue()==='Yes' ? '★' : '☆'}</button>`,
+        cellClick: (e, cell) => { e.stopPropagation(); toggleFavoritePairing(cell.getRow().getData()._raw); }
+      },
       {
         title:'Pairing', field:'pairing', width:85, frozen:true, headerFilter:true, visible: true,
         formatter: function(cell) {
@@ -3211,7 +3257,7 @@ function renderPairingTable() {
   if (viewerViewSelect) viewerViewSelect.addEventListener('change', loadSelectedViewerView);
   const profileSelect = document.getElementById('profile-select');
   if (profileSelect) profileSelect.addEventListener('change', loadSelectedBidProfile);
-  ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-weekday',
+  ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-favorites','filter-weekday',
    'filter-avoid-p-etops','filter-avoid-a-etops'].forEach(id => {
     document.getElementById(id).addEventListener('change', applyFilters);
   });
@@ -3248,6 +3294,7 @@ function applyFilters() {
   const avgLayoverMin = parseFloat(viewerQuickSettings.avgLayoverMin);
   const avoidPEtops = document.getElementById('filter-avoid-p-etops').checked;
   const avoidAEtops = document.getElementById('filter-avoid-a-etops').checked;
+  const favoritesOnly = document.getElementById('filter-favorites').checked;
   const destinationScope = bidProfile.destinationScope || 'all';
   const destinationCode = normalizeAirportCode(bidProfile.destinationCode);
 
@@ -3271,6 +3318,7 @@ function applyFilters() {
   if (document.getElementById('filter-lazy').checked) pairingTable.addFilter('lazy', '=', 'Yes');
   if (document.getElementById('filter-commutable').checked) pairingTable.addFilter('commutable', '=', 'Yes');
   if (document.getElementById('filter-deadhead').checked) pairingTable.addFilter('deadhead', '=', 'Yes');
+  if (favoritesOnly) pairingTable.addFilter((data) => isFavoritePairing(data._raw), {});
   if (document.getElementById('filter-weekday').checked) pairingTable.addFilter('weekday', '=', 'Yes');
   if (avoidPEtops) pairingTable.addFilter('p_etops', '!=', 'Yes');
   if (avoidAEtops) pairingTable.addFilter('a_etops', '!=', 'Yes');
@@ -3587,6 +3635,7 @@ function getEligiblePairings() {
   const maxLegs = parseFloat(document.getElementById('filter-max-legs').value);
   const minCredit = parseFloat(document.getElementById('filter-min-credit').value);
   const avgLayoverMin = parseFloat(viewerQuickSettings.avgLayoverMin);
+  const favoritesOnly = document.getElementById('filter-favorites')?.checked;
   const earlyFinishAfter = timeInputToMins(viewerQuickSettings.earlyFinishAfter || '07:00');
   const earlyFinishBefore = timeInputToMins(viewerQuickSettings.earlyFinishBefore || '18:00');
   const destinationScope = bidProfile.destinationScope || 'all';
@@ -3599,6 +3648,7 @@ function getEligiblePairings() {
     if (!isNaN(maxLegs) && maxLegs > 0 && (p.max_legs_per_day || 0) > maxLegs) return false;
     if (!isNaN(minCredit) && minCredit > 0 && (p.correctedcredit || 0) < minCredit) return false;
     if (!isNaN(avgLayoverMin) && avgLayoverMin > 0 && (p.average_layover || 0) < avgLayoverMin) return false;
+    if (favoritesOnly && !isFavoritePairing(p)) return false;
     if (!isNaN(earlyFinishAfter) && !isNaN(earlyFinishBefore)) {
       const releaseMins = p.release_minutes || timeStrToMinutes(p.release_time || '');
       if (!isNaN(releaseMins) && releaseMins > 0 && (releaseMins < earlyFinishAfter || releaseMins > earlyFinishBefore)) return false;
