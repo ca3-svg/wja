@@ -301,7 +301,7 @@
 
     <!-- Viewer Layout -->
     <div class="flex flex-col xl:flex-row gap-4 min-h-0">
-      <aside id="viewer-drawer" class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-sm sticky top-16 z-30 w-full xl:w-[360px] shrink-0 transition-all duration-200">
+      <aside id="viewer-drawer" class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl shadow-sm sticky top-16 z-30 w-full xl:w-[360px] shrink-0 transition-all duration-200 xl:max-h-[calc(100vh-5rem)] xl:overflow-hidden">
         <div class="flex items-center justify-between gap-3 p-3 border-b border-slate-200 dark:border-dark-700">
           <div class="min-w-0">
             <div class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -313,7 +313,7 @@
             <i data-lucide="panel-left-close" class="w-3.5 h-3.5"></i>
           </button>
         </div>
-        <div id="viewer-drawer-body" class="p-3 flex flex-col gap-3">
+        <div id="viewer-drawer-body" class="p-3 flex flex-col gap-3 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto custom-scrollbar">
           <div class="flex flex-wrap items-start justify-start gap-2">
             <div class="flex items-center gap-2">
               <input type="text" id="viewer-view-name" class="input-base py-1.5 px-2 text-xs w-32" placeholder="Save view">
@@ -452,7 +452,7 @@
         </div>
       </aside>
 
-      <div id="viewer-content" class="flex-1 min-w-0">
+      <div id="viewer-content" class="flex-1 min-w-0 xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto custom-scrollbar">
         <!-- Table Container -->
         <div id="pairing-table" class="w-full text-sm flex-1"></div>
       </div>
@@ -2388,8 +2388,8 @@ function renderViewerPreferences() {
     { key: 'home', label: 'YOW home layover', desc: 'Pinned home destination for Ottawa layovers', value: 'YOW' },
     { key: 'usa', label: 'USA layovers', desc: 'Prefer pairings with U.S. layovers', value: 'scope' },
     { key: 'intl', label: 'International layovers', desc: 'Prefer pairings outside Canada and the USA', value: 'scope' },
-    { key: 'late', label: 'Late start', desc: 'First leg departure must be at or after this time', value: viewerQuickSettings.lateStartAfter || '10:00' },
-    { key: 'early', label: 'Early finish', desc: 'Last leg arrival must be at or before this time', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
+    { key: 'late', label: 'Late start', desc: 'Report time must be at or after this time', value: viewerQuickSettings.lateStartAfter || '10:00' },
+    { key: 'early', label: 'Early finish', desc: 'Release time must be at or before this time', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
     { key: 'long', label: 'Long layover', desc: 'Minimum layover length to keep a pairing in view', value: `${viewerQuickSettings.longLayoverMin || '10'}h` },
     { key: 'avg', label: 'Average layover', desc: 'Average layover across the pairing must be at least this much', value: viewerQuickSettings.avgLayoverMin ? `${viewerQuickSettings.avgLayoverMin}h` : 'unset' },
     { key: 'fewlegs', label: 'Few legs', desc: 'Maximum legs per day for a pairing', value: viewerQuickSettings.fewLegsMax || '2' },
@@ -2424,8 +2424,8 @@ function syncPreferenceModal(kind) {
   if (!modal || !title || !desc || !value) return;
 
   const defs = {
-    late: { title: 'Late start after', desc: 'Pairings must start at or after this first-leg departure time.', value: viewerQuickSettings.lateStartAfter || '10:00' },
-    early: { title: 'Early finish before', desc: 'Pairings must finish at or before this last-leg arrival time.', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
+    late: { title: 'Late start after', desc: 'Pairings must start at or after this report time.', value: viewerQuickSettings.lateStartAfter || '10:00' },
+    early: { title: 'Early finish before', desc: 'Pairings must finish at or before this release time.', value: viewerQuickSettings.earlyFinishBefore || '18:00' },
     long: { title: 'Long layover minimum', desc: 'Keep pairings with at least this layover length in hours.', value: viewerQuickSettings.longLayoverMin || '10' },
     avg: { title: 'Average layover minimum', desc: 'Keep pairings whose average layover is at least this many hours.', value: viewerQuickSettings.avgLayoverMin || '' },
     fewlegs: { title: 'Few legs maximum', desc: 'Keep pairings that do not exceed this many legs per day.', value: viewerQuickSettings.fewLegsMax || '2' },
@@ -3194,10 +3194,10 @@ function applyFilters() {
   }
 
   const rptMins = timeInputToMins(rptAfter);
-  if (!isNaN(rptMins)) pairingTable.addFilter((data, p) => data.first_leg_departure_mins === 0 || data.first_leg_departure_mins >= p.m, {m: rptMins});
+  if (!isNaN(rptMins)) pairingTable.addFilter((data, p) => data.report_mins === 0 || data.report_mins >= p.m, {m: rptMins});
 
   const rlsMins = timeInputToMins(rlsBefore);
-  if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.last_leg_arrival_mins === 0 || data.last_leg_arrival_mins <= p.m, {m: rlsMins});
+  if (!isNaN(rlsMins)) pairingTable.addFilter((data, p) => data.release_mins === 0 || data.release_mins <= p.m, {m: rlsMins});
   if (!isNaN(avgLayoverMin) && avgLayoverMin > 0) pairingTable.addFilter('average_lay', '>=', avgLayoverMin);
   syncQuickFilterButtons();
   syncDestinationSummary();
@@ -3399,8 +3399,8 @@ function scorePairing(p) {
   const stations = extractPairingStations(p);
   const matchesFav = [...stations].some(code => favs.has(normalizeAirportCode(code)));
   const hasYowLayover = (p.layovers || []).some(l => normalizeAirportCode(l.location) === 'YOW');
-  const startMins = p.first_leg_departure_mins || p.report_minutes || timeStrToMinutes(p.report_time || '');
-  const releaseMins = p.last_leg_arrival_mins || p.release_minutes || timeStrToMinutes(p.release_time || '');
+  const startMins = p.report_minutes || timeStrToMinutes(p.report_time || '');
+  const releaseMins = p.release_minutes || timeStrToMinutes(p.release_time || '');
   const avgLayover = p.average_layover || 0;
 
   const efficiency = tafbH > 0 ? creditH / tafbH : 0;
