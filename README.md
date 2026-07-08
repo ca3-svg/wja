@@ -1,43 +1,78 @@
-# ✈️ Pairing Parser Web App
+# WJA
 
-A lightweight, self-hosted PDF pairing schedule parser and viewer built for airline pilots.  
-It extracts and visualizes monthly pairing PDFs (final or prelim) into structured, searchable tables — optimized for iPad Pro and desktop browsers.
+WJA is a lightweight pairing PDF parser and bid-planning web app for airline pilots.
+It turns monthly pairing documents into searchable, structured data so you can review trips, filter options, plan GDOs, and build a bid faster.
 
 Current version: `v0.1.0`
 
----
+## What It Does
 
-## 🌐 Live Demo
+- Upload a pairing PDF and extract the text locally in the browser.
+- Parse trip blocks into structured fields like trip number, pairing number, base, dates, credit, TAFB, per diem, layovers, and legs.
+- View the parsed pairings in a searchable, sortable table.
+- Filter pairings by things like base, days, redeye, commutable, lazy, weekday-only, deadhead, and ETOPS-related flags.
+- Plan guaranteed days off on a calendar view.
+- Build and score a bid list with basic guardrails and export-friendly output.
 
-Visit [https://pairingviewer.com](https://pairingviewer.com)
+## Why It Exists
 
----
+Pairing PDFs are dense and hard to scan quickly.
+WJA reduces the manual effort of reading monthly schedules by turning them into a cleaner workflow for:
 
-## 🚀 Features
+- trip review
+- pairing comparison
+- bid selection
+- schedule sanity checks
 
-- 📄 Upload airline pairing PDF (supports both **Final** and **Prelim**)
-- ⚡ Fast, parallelized PDF-to-text extraction
-- 🧠 Smart parser: detects TAFB, per diem, layovers, report/release times, and more
-- 📱 Optimized UI for **iPad Pro M4 landscape**
-- 🌙 Night mode + persistent column layout with Tabulator
-- 🔍 Instant search, filter by redeye, commutable, lazy, weekdays, etc.
+## Main Features
 
----
+- PDF upload with client-side text extraction
+- Final and prelim pairing parsing
+- Searchable Tabulator-based pairing table
+- Trip detail inspection
+- GDO planner with calendar highlighting
+- Bid builder with ranking and conflict checks
+- Local persistence in browser storage
+- Dark mode UI
 
-## 🏗️ Architecture
+## How It Works
 
-| Layer | Stack |
-|-------|--------|
-| Frontend | HTML5 + Tabulator 5.x + Vanilla JS |
-| Backend | Flask (Python 3.11+) + PyMuPDF |
-| Hosting | Any VPS (Nginx + Gunicorn + Certbot) |
+1. Upload a pairing PDF.
+2. The app uses `pdf.js` to read the text from each page.
+3. The parser detects trip blocks and extracts useful fields.
+4. Parsed trips are rendered into the table and calendar views.
+5. You filter, compare, and assemble a bid list from the parsed data.
 
----
+## Project Structure
 
-## 📦 Repository Docs
+- `index.htm` - main browser app
+- `pairing_parser.py` - standalone Python parser that outputs JSON
+- `CHANGELOG.md` - release history
+- `RELEASE.md` - release/versioning notes
+- `CONTRIBUTING.md` - contribution workflow
+- `SECURITY.md` - security reporting guidance
 
-- [CHANGELOG.md](CHANGELOG.md)
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- [SECURITY.md](SECURITY.md)
-- [RELEASE.md](RELEASE.md)
+## Usage
+
+Open `index.htm` in a browser, upload a pairing PDF, and start filtering pairings.
+
+## Tech Stack
+
+- HTML5
+- Vanilla JavaScript
+- Tabulator
+- PDF.js
+- Tailwind CDN
+- Python 3.11+ for the standalone parser
+
+## Versioning
+
+This repo uses semantic versioning.
+
+- `MAJOR` for breaking changes
+- `MINOR` for new features
+- `PATCH` for fixes
+
+## License
+
+See [LICENSE](LICENSE).
