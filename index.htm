@@ -358,11 +358,11 @@
                   </select>
                   <div class="flex items-center gap-2">
                     <span class="text-xs text-slate-500 dark:text-slate-400">RPT After</span>
-                    <input type="time" id="filter-rpt-after" class="input-base py-1 px-2 w-24 text-xs">
+                    <input type="text" id="filter-rpt-after" class="input-base py-1 px-2 w-24 text-xs" inputmode="numeric" placeholder="HH:MM">
                   </div>
                   <div class="flex items-center gap-2">
                     <span class="text-xs text-slate-500 dark:text-slate-400">RLS Before</span>
-                    <input type="time" id="filter-rls-before" class="input-base py-1 px-2 w-24 text-xs">
+                    <input type="text" id="filter-rls-before" class="input-base py-1 px-2 w-24 text-xs" inputmode="numeric" placeholder="HH:MM">
                   </div>
                 </div>
                 <button class="btn-base btn-secondary !py-1.5 !px-3 !text-xs" onclick="clearViewerFilters()">Clear all</button>
@@ -2180,6 +2180,16 @@ function timeInputToMins(val) {
   return h * 60 + m;
 }
 
+function normalizeTimeValue(val, fallback = '') {
+  const raw = String(val ?? '').trim();
+  if (!raw) return fallback;
+  const match = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return fallback || raw;
+  const h = Math.max(0, Math.min(23, parseInt(match[1], 10)));
+  const m = Math.max(0, Math.min(59, parseInt(match[2], 10)));
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 function normalizeAirportCode(value) {
   return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
 }
@@ -2440,8 +2450,8 @@ function syncPreferenceModal(kind) {
   if (!modal || !title || !desc || !value) return;
 
   const defs = {
-    late: { title: 'Late start after', desc: 'Pairings must start at or after this report time.', value: viewerQuickSettings.lateStartAfter || '10:00' },
-    early: { title: 'Early finish window', desc: 'Pairings must finish between the lower bound and this release time.', value: viewerQuickSettings.earlyFinishBefore || '18:00', secondary: viewerQuickSettings.earlyFinishAfter || '07:00' },
+    late: { title: 'Late start after', desc: 'Pairings must start at or after this report time.', value: normalizeTimeValue(viewerQuickSettings.lateStartAfter, '10:00') },
+    early: { title: 'Early finish window', desc: 'Pairings must finish between the lower bound and this release time.', value: normalizeTimeValue(viewerQuickSettings.earlyFinishBefore, '18:00'), secondary: normalizeTimeValue(viewerQuickSettings.earlyFinishAfter, '07:00') },
     long: { title: 'Minimum layover length', desc: 'Keep pairings whose shortest layover is at least this many hours.', value: viewerQuickSettings.longLayoverMin || '10' },
     avg: { title: 'Average layover minimum', desc: 'Keep pairings whose average layover is at least this many hours.', value: viewerQuickSettings.avgLayoverMin || '' },
     fewlegs: { title: 'Few legs maximum', desc: 'Keep pairings that do not exceed this many legs per day.', value: viewerQuickSettings.fewLegsMax || '2' },
@@ -2451,13 +2461,15 @@ function syncPreferenceModal(kind) {
   title.textContent = cfg.title;
   desc.textContent = cfg.desc;
   value.value = cfg.value;
-  value.type = kind === 'late' || kind === 'early' ? 'time' : (kind === 'long' || kind === 'avg' || kind === 'fewlegs' ? 'number' : 'text');
+  value.type = kind === 'late' || kind === 'early' ? 'text' : (kind === 'long' || kind === 'avg' || kind === 'fewlegs' ? 'number' : 'text');
+  value.inputMode = kind === 'late' || kind === 'early' ? 'numeric' : 'text';
   value.step = (kind === 'long' || kind === 'avg' || kind === 'fewlegs') ? '0.5' : '1';
   value.min = (kind === 'long' || kind === 'avg' || kind === 'fewlegs') ? '0' : '';
   if (secondaryWrap && secondary) {
     if (kind === 'early') {
       secondaryWrap.classList.remove('hidden');
-      secondary.type = 'time';
+      secondary.type = 'text';
+      secondary.inputMode = 'numeric';
       secondary.value = cfg.secondary || '07:00';
     } else {
       secondaryWrap.classList.add('hidden');
@@ -2480,8 +2492,8 @@ function closePreferenceModal() {
 }
 
 function savePreferenceModal() {
-  const value = (document.getElementById('preference-modal-value')?.value || '').trim();
-  const secondary = (document.getElementById('preference-modal-secondary')?.value || '').trim();
+  const value = normalizeTimeValue(document.getElementById('preference-modal-value')?.value || '');
+  const secondary = normalizeTimeValue(document.getElementById('preference-modal-secondary')?.value || '');
   if (!activePreferenceEdit) return closePreferenceModal();
   if (activePreferenceEdit === 'late') viewerQuickSettings.lateStartAfter = value || '10:00';
   else if (activePreferenceEdit === 'early') {
@@ -2531,8 +2543,8 @@ function applyViewerFilterSnapshot(snapshot = {}) {
   setValue('search-input', snapshot.search || '');
   setValue('filter-base', snapshot.base || '');
   setValue('filter-days', snapshot.days || '');
-  setValue('filter-rpt-after', snapshot.rptAfter || '');
-  setValue('filter-rls-before', snapshot.rlsBefore || '');
+  setValue('filter-rpt-after', normalizeTimeValue(snapshot.rptAfter || ''));
+  setValue('filter-rls-before', normalizeTimeValue(snapshot.rlsBefore || ''));
   setValue('filter-min-lay', snapshot.minLay || '');
   setValue('filter-max-lay', snapshot.maxLay || '');
   setValue('filter-max-legs', snapshot.maxLegs || '');
@@ -2547,9 +2559,9 @@ function applyViewerFilterSnapshot(snapshot = {}) {
   bidProfile.destinationScope = snapshot.destinationScope || 'all';
   bidProfile.destinationCode = normalizeAirportCode(snapshot.destinationCode || '');
   viewerQuickSettings = {
-    lateStartAfter: snapshot.viewerQuickSettings?.lateStartAfter || '10:00',
-    earlyFinishBefore: snapshot.viewerQuickSettings?.earlyFinishBefore || '18:00',
-    earlyFinishAfter: snapshot.viewerQuickSettings?.earlyFinishAfter || '07:00',
+    lateStartAfter: normalizeTimeValue(snapshot.viewerQuickSettings?.lateStartAfter, '10:00'),
+    earlyFinishBefore: normalizeTimeValue(snapshot.viewerQuickSettings?.earlyFinishBefore, '18:00'),
+    earlyFinishAfter: normalizeTimeValue(snapshot.viewerQuickSettings?.earlyFinishAfter, '07:00'),
     longLayoverMin: snapshot.viewerQuickSettings?.longLayoverMin || '10',
     fewLegsMax: snapshot.viewerQuickSettings?.fewLegsMax || '2',
     avgLayoverMin: snapshot.viewerQuickSettings?.avgLayoverMin || ''
@@ -2563,10 +2575,12 @@ function applyViewerFilterSnapshot(snapshot = {}) {
 function renderViewerSavedViews() {
   const select = document.getElementById('viewer-view-select');
   if (!select) return;
+  const current = select.value;
   const names = Object.keys(savedViewerViews).sort();
   select.innerHTML = names.length
     ? names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')
     : '<option value="">No saved views</option>';
+  if (names.includes(current)) select.value = current;
 }
 
 function renderActiveFilterChips() {
@@ -2619,10 +2633,12 @@ function syncBidProfileUI() {
   if (daysEl) daysEl.value = bidProfile.targetDays ?? 16;
   if (favInput) favInput.value = '';
   if (profileSelect) {
+    const current = profileSelect.value;
     const names = Object.keys(savedBidProfiles).sort();
     profileSelect.innerHTML = names.length
       ? names.map(name => `<option value="${name}">${name}</option>`).join('')
       : '<option value="">No saved profiles</option>';
+    if (names.includes(current)) profileSelect.value = current;
   }
   syncBidProfileModeButtons();
   syncDestinationModeButtons();
@@ -2680,8 +2696,8 @@ function updateViewerQuickSettingsFromUI() {
   const fewLegs = document.getElementById('viewer-few-legs-max');
   const avgLay = document.getElementById('viewer-avg-lay-min');
 
-  if (late) next.lateStartAfter = late.value || next.lateStartAfter;
-  if (early) next.earlyFinishBefore = early.value || next.earlyFinishBefore;
+  if (late) next.lateStartAfter = normalizeTimeValue(late.value, next.lateStartAfter);
+  if (early) next.earlyFinishBefore = normalizeTimeValue(early.value, next.earlyFinishBefore);
   if (longLay) next.longLayoverMin = longLay.value || next.longLayoverMin;
   if (fewLegs) next.fewLegsMax = fewLegs.value || next.fewLegsMax;
   if (avgLay) next.avgLayoverMin = avgLay.value || next.avgLayoverMin;
@@ -2901,11 +2917,16 @@ function toggleViewerShortcut(kind) {
     if (bidProfile.destinationScope === 'intl') bidProfile.destinationCode = '';
   } else if (kind === 'long') {
     const el = document.getElementById('filter-min-lay');
-    if (el) el.value = el.value === viewerQuickSettings.longLayoverMin ? '' : viewerQuickSettings.longLayoverMin;
+    if (el) {
+      const current = String(parseFloat(el.value || ''));
+      el.value = current === viewerQuickSettings.longLayoverMin ? '' : viewerQuickSettings.longLayoverMin;
+    }
   } else if (kind === 'late') {
-    setValue('filter-rpt-after', document.getElementById('filter-rpt-after')?.value === viewerQuickSettings.lateStartAfter ? '' : viewerQuickSettings.lateStartAfter);
+    const current = normalizeTimeValue(document.getElementById('filter-rpt-after')?.value || '', '');
+    setValue('filter-rpt-after', current === viewerQuickSettings.lateStartAfter ? '' : viewerQuickSettings.lateStartAfter);
   } else if (kind === 'early') {
-    setValue('filter-rls-before', document.getElementById('filter-rls-before')?.value === viewerQuickSettings.earlyFinishBefore ? '' : viewerQuickSettings.earlyFinishBefore);
+    const current = normalizeTimeValue(document.getElementById('filter-rls-before')?.value || '', '');
+    setValue('filter-rls-before', current === viewerQuickSettings.earlyFinishBefore ? '' : viewerQuickSettings.earlyFinishBefore);
   } else if (kind === 'fewlegs') {
     setValue('filter-max-legs', document.getElementById('filter-max-legs')?.value === viewerQuickSettings.fewLegsMax ? '' : viewerQuickSettings.fewLegsMax);
   } else if (kind === 'commutable') {
@@ -3159,6 +3180,10 @@ function renderPairingTable() {
   document.getElementById('filter-max-lay').addEventListener('change', applyFilters);
   document.getElementById('filter-max-legs').addEventListener('change', applyFilters);
   document.getElementById('filter-min-credit').addEventListener('change', applyFilters);
+  const viewerViewSelect = document.getElementById('viewer-view-select');
+  if (viewerViewSelect) viewerViewSelect.addEventListener('change', loadSelectedViewerView);
+  const profileSelect = document.getElementById('profile-select');
+  if (profileSelect) profileSelect.addEventListener('change', loadSelectedBidProfile);
   ['filter-redeye','filter-lazy','filter-commutable','filter-deadhead','filter-weekday',
    'filter-avoid-p-etops','filter-avoid-a-etops'].forEach(id => {
     document.getElementById(id).addEventListener('change', applyFilters);
