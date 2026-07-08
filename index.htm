@@ -1834,8 +1834,7 @@ function parseTripBlock(block) {
       if (aptAlt) {
         const dmatch = line.match(layDurRe);
         if (dmatch) {
-          const mins = timeStrToMinutes(dmatch[1]);
-          if (!isNaN(mins) && mins >= 480) trip.layovers.push({location: aptAlt[1].toUpperCase(), duration: dmatch[1]});
+          trip.layovers.push({location: aptAlt[1].toUpperCase(), duration: dmatch[1]});
         } else {
           trip.layovers.push({location: aptAlt[1].toUpperCase(), duration: 'N/A'});
         }
