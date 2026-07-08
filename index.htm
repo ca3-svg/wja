@@ -2425,7 +2425,7 @@ function renderViewerPreferences() {
 
   host.innerHTML = items.map(item => `
     <div class="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-dark-700 bg-slate-50 dark:bg-dark-900 px-3 py-2 shadow-sm">
-      <button type="button" class="flex-1 min-w-0 flex items-center gap-3 text-left" onclick="${item.key === 'home' ? `toggleViewerShortcut('home')` : (['late','early','long','avg','fewlegs'].includes(item.key) ? `openPreferenceModal('${item.key}')` : `toggleViewerShortcut('${item.key}')`)}">
+      <button type="button" class="flex-1 min-w-0 flex items-center gap-3 text-left" onclick="toggleViewerShortcut('${item.key}')">
         <span class="min-w-0 flex-1">
           <span class="block text-xs font-semibold text-slate-700 dark:text-slate-200">${item.label}</span>
           <span class="block text-[11px] leading-4 text-slate-500 dark:text-slate-400 truncate">${item.desc}</span>
@@ -2918,8 +2918,8 @@ function toggleViewerShortcut(kind) {
   } else if (kind === 'long') {
     const el = document.getElementById('filter-min-lay');
     if (el) {
-      const current = String(parseFloat(el.value || ''));
-      el.value = current === viewerQuickSettings.longLayoverMin ? '' : viewerQuickSettings.longLayoverMin;
+      const current = String(el.value || '').trim();
+      el.value = current === String(viewerQuickSettings.longLayoverMin || '').trim() ? '' : viewerQuickSettings.longLayoverMin;
     }
   } else if (kind === 'late') {
     const current = normalizeTimeValue(document.getElementById('filter-rpt-after')?.value || '', '');
@@ -2929,6 +2929,11 @@ function toggleViewerShortcut(kind) {
     setValue('filter-rls-before', current === viewerQuickSettings.earlyFinishBefore ? '' : viewerQuickSettings.earlyFinishBefore);
   } else if (kind === 'fewlegs') {
     setValue('filter-max-legs', document.getElementById('filter-max-legs')?.value === viewerQuickSettings.fewLegsMax ? '' : viewerQuickSettings.fewLegsMax);
+  } else if (kind === 'avg') {
+    if (!viewerQuickSettings.avgLayoverMin) {
+      openPreferenceModal('avg');
+      return;
+    }
   } else if (kind === 'commutable') {
     toggleChecked('filter-commutable');
   } else if (kind === 'lazy') {
