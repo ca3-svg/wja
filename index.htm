@@ -452,32 +452,88 @@
       </summary>
       
       <div class="p-4 flex flex-col gap-4">
-        <div class="flex flex-wrap items-center gap-4">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1"><i data-lucide="brain-circuit" class="w-4 h-4"></i> Presets:</span>
-            <div class="flex bg-slate-100 dark:bg-dark-900 rounded-lg p-1 border border-slate-200 dark:border-dark-700 mode-toggle">
-              <button class="px-3 py-1 rounded-md text-sm font-medium transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-mode="lazy" onclick="applyPreset('lazy')">
-                ☕ Lazy
-              </button>
-              <button class="px-3 py-1 rounded-md text-sm font-medium transition-colors text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 active" data-mode="efficient" onclick="applyPreset('efficient')">
-                ⚡ Efficient
-              </button>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <i data-lucide="brain-circuit" class="w-4 h-4 text-brand-500"></i> Monthly Goal
+            </div>
+            <div class="flex flex-wrap gap-2 mode-toggle">
+              <button class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-slate-500 dark:text-slate-400 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:text-slate-900 dark:hover:text-white" data-mode="home" onclick="applyPreset('home')">Home time</button>
+              <button class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/30 active" data-mode="balanced" onclick="applyPreset('balanced')">Balanced</button>
+              <button class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-slate-500 dark:text-slate-400 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:text-slate-900 dark:hover:text-white" data-mode="credit" onclick="applyPreset('credit')">Credit max</button>
+              <button class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-slate-500 dark:text-slate-400 bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:text-slate-900 dark:hover:text-white" data-mode="lazy" onclick="applyPreset('lazy')">Lazy</button>
+            </div>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Choose whether this month should optimize for home time, credit, or an easier schedule.</p>
+          </div>
+
+          <div class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <i data-lucide="target" class="w-4 h-4 text-brand-500"></i> Monthly Targets
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-xs text-slate-500 dark:text-slate-400">
+                Credit target
+                <input type="number" id="target-credit" min="0" max="200" step="0.5" class="input-base mt-1 w-full py-1 px-2 text-sm" onchange="updateBidProfileFromUI(); if(bidTable) runBidBuilder(false)">
+              </label>
+              <label class="text-xs text-slate-500 dark:text-slate-400">
+                Work days
+                <input type="number" id="target-days" min="0" max="31" step="1" class="input-base mt-1 w-full py-1 px-2 text-sm" onchange="updateBidProfileFromUI(); if(bidTable) runBidBuilder(false)">
+              </label>
+              <div class="col-span-2 flex items-center gap-2">
+                <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Duration:</span>
+                <select id="prefer-days" class="input-base py-1 text-sm flex-1" onchange="if(bidTable) runBidBuilder(false)">
+                  <option value="0" selected>Any duration</option>
+                  <option value="5">5-day pairings</option>
+                  <option value="4">4-5 day pairings</option>
+                  <option value="3">3-day pairings</option>
+                  <option value="2">2-day pairings</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="w-px h-6 bg-slate-200 dark:bg-dark-700 hidden md:block"></div>
-
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Duration:</span>
-            <select id="prefer-days" class="input-base py-1 text-sm w-36" onchange="if(bidTable) runBidBuilder(false)">
-              <option value="0" selected>Any duration</option>
-              <option value="5">5-day pairings</option>
-              <option value="4">4-5 day pairings</option>
-              <option value="3">3-day pairings</option>
-              <option value="2">2-day pairings</option>
-            </select>
+          <div class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <i data-lucide="bookmark-plus" class="w-4 h-4 text-brand-500"></i> Saved Profile
+            </div>
+            <div class="space-y-3">
+              <input type="text" id="profile-name" class="input-base w-full py-1.5 px-2 text-sm" placeholder="Profile name e.g. Home-heavy">
+              <select id="profile-select" class="input-base w-full py-1.5 px-2 text-sm"></select>
+              <div class="flex gap-2">
+                <button class="btn-base btn-primary flex-1 !py-2 !px-3 !text-xs" onclick="saveBidProfile()">Save</button>
+                <button class="btn-base btn-secondary flex-1 !py-2 !px-3 !text-xs" onclick="loadSelectedBidProfile()">Load</button>
+                <button class="btn-base btn-secondary !py-2 !px-3 !text-xs" onclick="deleteSelectedBidProfile()">Delete</button>
+              </div>
+            </div>
           </div>
+        </div>
 
+        <div class="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl p-4">
+          <div class="flex items-center gap-2 mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <i data-lucide="map-pinned" class="w-4 h-4 text-brand-500"></i> Destination Focus
+          </div>
+          <div class="flex flex-wrap gap-2 mb-3" id="destination-chip-row">
+            <button class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="toggleDestinationMode('home')">YOW layovers</button>
+            <button class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="toggleDestinationMode('favorites')">Favorites</button>
+            <button class="px-3 py-1.5 rounded-full border border-slate-200 dark:border-dark-700 text-xs font-medium bg-white dark:bg-dark-800 hover:border-brand-300 hover:text-brand-600" onclick="toggleDestinationMode('any')">Any destination</button>
+          </div>
+          <div class="flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[260px]">
+              <label class="text-xs text-slate-500 dark:text-slate-400">Add favorite airport codes</label>
+              <div class="flex gap-2 mt-1">
+                <input type="text" id="favorite-dest-input" class="input-base flex-1 py-1.5 px-2 text-sm" placeholder="YOW, YYZ, JFK, LHR" onkeydown="if(event.key==='Enter'){event.preventDefault(); addFavoriteDestination();}">
+                <button class="btn-base btn-secondary !py-2 !px-3 !text-xs" onclick="addFavoriteDestination()">Add</button>
+              </div>
+            </div>
+            <div class="min-w-[240px] flex-1">
+              <label class="text-xs text-slate-500 dark:text-slate-400">Suggested destinations</label>
+              <div id="destination-suggestions" class="mt-1 flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+          <div id="favorite-destination-list" class="mt-3 flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Layover (hrs):</span>
             <input type="number" id="filter-min-lay" placeholder="Min" class="input-base py-1 px-2 w-16 text-center text-sm" onchange="if(bidTable) runBidBuilder(false)">
@@ -1169,6 +1225,14 @@ let _detailsCache = [];
 let _colPickerOpen = false;    
 
 let bidWeights = { credit: 8, layover: 0, commutable: 15, redeye: 60 };
+let bidProfile = {
+  monthlyGoal: 'balanced',
+  targetCredit: 75,
+  targetDays: 16,
+  destinationMode: 'any',
+  favoriteDestinations: []
+};
+let savedBidProfiles = {};
 
 // Sourced from user/app state (currently mock defaults until Reserve UI is built)
 let pilotState = {
@@ -1186,7 +1250,9 @@ function saveData() {
       gdoDays: Array.from(gdoDays),
       bidList,
       pairingMonth,
-      bidWeights
+      bidWeights,
+      bidProfile,
+      savedBidProfiles
     };
     localStorage.setItem('westjet_bid_data', JSON.stringify(data));
     document.getElementById('clear-data-btn').classList.remove('hidden');
@@ -1209,6 +1275,16 @@ function loadData() {
         bidWeights = data.bidWeights;
         syncSlidersToWeights();
       }
+      if (data.bidProfile) {
+        bidProfile = {
+          monthlyGoal: data.bidProfile.monthlyGoal || 'balanced',
+          targetCredit: data.bidProfile.targetCredit || 75,
+          targetDays: data.bidProfile.targetDays || 16,
+          destinationMode: data.bidProfile.destinationMode || 'any',
+          favoriteDestinations: Array.isArray(data.bidProfile.favoriteDestinations) ? data.bidProfile.favoriteDestinations : []
+        };
+      }
+      savedBidProfiles = data.savedBidProfiles || {};
 
       if (allPairings.length > 0) {
         document.getElementById('file-label').textContent = 'Loaded from Saved Data';
@@ -1222,6 +1298,7 @@ function loadData() {
         renderStats();
         renderPairingTable();
         populateBaseFilter();
+        syncBidProfileUI();
       }
     }
   } catch (e) {
@@ -1324,6 +1401,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // Select Viewer by default
 document.querySelector('[data-tab="viewer"]').click();
+syncBidProfileUI();
 document.getElementById('pairing-modal').addEventListener('click', e => {
   if (e.target && e.target.id === 'pairing-modal') closePairingModal();
 });
@@ -1424,6 +1502,7 @@ async function handleFile(file) {
     detectPairingMonth();
     renderStats();
     renderPairingTable();
+    syncBidProfileUI();
     
     fill.style.width = '100%'; pctText.textContent = '100%';
     setTimeout(() => { 
@@ -1960,6 +2039,249 @@ function timeInputToMins(val) {
   return h * 60 + m;
 }
 
+function normalizeAirportCode(value) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+}
+
+function extractPairingStations(p) {
+  const stations = new Set();
+  if (!p) return stations;
+  if (p.days) {
+    Object.values(p.days).forEach(legs => {
+      (legs || []).forEach(leg => {
+        if (leg?.dep_station) stations.add(leg.dep_station.toUpperCase());
+        if (leg?.arr_station) stations.add(leg.arr_station.toUpperCase());
+      });
+    });
+  }
+  if (p.layovers) {
+    p.layovers.forEach(l => {
+      if (l?.location) stations.add(l.location.toUpperCase());
+    });
+  }
+  return stations;
+}
+
+function getTopDestinationSuggestions(limit = 8) {
+  const counts = new Map();
+  allPairings.forEach(p => {
+    (p.layovers || []).forEach(l => {
+      const code = normalizeAirportCode(l.location);
+      if (!code) return;
+      counts.set(code, (counts.get(code) || 0) + 1);
+    });
+  });
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([code]) => code);
+}
+
+function renderDestinationSuggestions() {
+  const host = document.getElementById('destination-suggestions');
+  if (!host) return;
+  const suggestions = getTopDestinationSuggestions(8);
+  const current = new Set((bidProfile.favoriteDestinations || []).map(normalizeAirportCode));
+  host.innerHTML = suggestions.length
+    ? suggestions.map(code => `
+      <button type="button" class="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${current.has(code) ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-500/30' : 'bg-white dark:bg-dark-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-dark-700 hover:border-brand-300 hover:text-brand-600'}" onclick="toggleSuggestedDestination('${code}')">${code}</button>
+    `).join('')
+    : '<span class="text-xs text-slate-500 dark:text-slate-400">Suggestions will appear after a PDF is loaded.</span>';
+}
+
+function renderFavoriteDestinations() {
+  const host = document.getElementById('favorite-destination-list');
+  if (!host) return;
+  const favs = [...new Set((bidProfile.favoriteDestinations || []).map(normalizeAirportCode).filter(Boolean))].sort();
+  host.innerHTML = favs.length
+    ? favs.map(code => `
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30 text-xs font-medium">
+        ${code}
+        <button type="button" class="hover:text-rose-500" onclick="removeFavoriteDestination('${code}')"><i data-lucide="x" class="w-3 h-3"></i></button>
+      </span>
+    `).join('')
+    : '<span class="text-xs text-slate-500 dark:text-slate-400">No favorites yet. Add airport codes you care about.</span>';
+  lucide.createIcons();
+}
+
+function syncBidProfileUI() {
+  const goalEl = document.getElementById('target-credit');
+  const daysEl = document.getElementById('target-days');
+  const favInput = document.getElementById('favorite-dest-input');
+  const profileSelect = document.getElementById('profile-select');
+
+  if (goalEl) goalEl.value = bidProfile.targetCredit ?? 75;
+  if (daysEl) daysEl.value = bidProfile.targetDays ?? 16;
+  if (favInput) favInput.value = '';
+  if (profileSelect) {
+    const names = Object.keys(savedBidProfiles).sort();
+    profileSelect.innerHTML = names.length
+      ? names.map(name => `<option value="${name}">${name}</option>`).join('')
+      : '<option value="">No saved profiles</option>';
+  }
+  renderFavoriteDestinations();
+  renderDestinationSuggestions();
+  syncBidProfileModeButtons();
+  syncDestinationModeButtons();
+}
+
+function syncBidProfileModeButtons() {
+  document.querySelectorAll('.mode-toggle button').forEach(btn => {
+    const active = btn.dataset.mode === (bidProfile.monthlyGoal || 'balanced');
+    if (active) {
+      btn.classList.add('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.remove('text-slate-500', 'dark:text-slate-400', 'bg-white', 'dark:bg-dark-800', 'border-slate-200', 'dark:border-dark-700');
+    } else {
+      btn.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.add('text-slate-500', 'dark:text-slate-400', 'bg-white', 'dark:bg-dark-800', 'border-slate-200', 'dark:border-dark-700');
+    }
+  });
+}
+
+function syncDestinationModeButtons() {
+  document.querySelectorAll('#destination-chip-row button').forEach(btn => {
+    const label = (btn.textContent || '').trim().toLowerCase();
+    const active =
+      (label.includes('yow') && bidProfile.destinationMode === 'home') ||
+      (label.includes('favorites') && bidProfile.destinationMode === 'favorites') ||
+      (label.includes('any destination') && bidProfile.destinationMode === 'any');
+
+    if (active) {
+      btn.classList.add('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.remove('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
+    } else {
+      btn.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400', 'border-brand-200', 'dark:border-brand-500/30');
+      btn.classList.add('bg-white', 'dark:bg-dark-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-dark-700');
+    }
+  });
+}
+
+function updateBidProfileFromUI() {
+  const targetCredit = parseFloat(document.getElementById('target-credit')?.value);
+  const targetDays = parseInt(document.getElementById('target-days')?.value, 10);
+  bidProfile.targetCredit = isNaN(targetCredit) ? 75 : targetCredit;
+  bidProfile.targetDays = isNaN(targetDays) ? 16 : targetDays;
+}
+
+function setMonthlyGoal(goal) {
+  bidProfile.monthlyGoal = goal;
+  bidMode = goal;
+  if (goal === 'home') {
+    bidWeights = { credit: 5, layover: 9, commutable: 18, redeye: 70 };
+    bidProfile.targetDays = 12;
+  } else if (goal === 'credit') {
+    bidWeights = { credit: 14, layover: 2, commutable: 10, redeye: 60 };
+    bidProfile.targetDays = 16;
+  } else if (goal === 'lazy') {
+    bidWeights = { credit: 2, layover: 12, commutable: 10, redeye: 80 };
+  } else {
+    bidWeights = { credit: 8, layover: 4, commutable: 15, redeye: 60 };
+  }
+  syncSlidersToWeights();
+  syncBidProfileModeButtons();
+  syncBidProfileUI();
+  saveData();
+  if (bidTable) runBidBuilder(false);
+}
+
+function applyPreset(mode) {
+  setMonthlyGoal(mode === 'efficient' ? 'balanced' : mode);
+}
+
+function toggleDestinationMode(mode) {
+  bidProfile.destinationMode = mode;
+  syncBidProfileUI();
+  saveData();
+  if (bidTable) runBidBuilder(false);
+}
+
+function addFavoriteDestination(rawValue) {
+  const input = typeof rawValue === 'string' ? rawValue : document.getElementById('favorite-dest-input')?.value;
+  const code = normalizeAirportCode(input);
+  if (!code) return;
+  const favs = new Set((bidProfile.favoriteDestinations || []).map(normalizeAirportCode).filter(Boolean));
+  favs.add(code);
+  bidProfile.favoriteDestinations = [...favs].sort();
+  const el = document.getElementById('favorite-dest-input');
+  if (el) el.value = '';
+  syncBidProfileUI();
+  saveData();
+  if (bidTable) runBidBuilder(false);
+}
+
+function removeFavoriteDestination(code) {
+  const normalized = normalizeAirportCode(code);
+  bidProfile.favoriteDestinations = (bidProfile.favoriteDestinations || []).filter(d => normalizeAirportCode(d) !== normalized);
+  syncBidProfileUI();
+  saveData();
+  if (bidTable) runBidBuilder(false);
+}
+
+function toggleSuggestedDestination(code) {
+  const normalized = normalizeAirportCode(code);
+  const favs = new Set((bidProfile.favoriteDestinations || []).map(normalizeAirportCode).filter(Boolean));
+  if (favs.has(normalized)) favs.delete(normalized);
+  else favs.add(normalized);
+  bidProfile.favoriteDestinations = [...favs].sort();
+  syncBidProfileUI();
+  saveData();
+  if (bidTable) runBidBuilder(false);
+}
+
+function saveBidProfile() {
+  updateBidProfileFromUI();
+  const name = (document.getElementById('profile-name')?.value || '').trim();
+  if (!name) {
+    showToast('Enter a profile name first', 'error');
+    return;
+  }
+  savedBidProfiles[name] = {
+    bidMode,
+    bidWeights,
+    bidProfile: (typeof structuredClone === 'function') ? structuredClone(bidProfile) : JSON.parse(JSON.stringify(bidProfile))
+  };
+  syncBidProfileUI();
+  saveData();
+  showToast(`Saved profile "${name}"`);
+}
+
+function loadSelectedBidProfile() {
+  const select = document.getElementById('profile-select');
+  const name = select?.value;
+  const profile = name ? savedBidProfiles[name] : null;
+  if (!profile) {
+    showToast('Select a saved profile first', 'error');
+    return;
+  }
+  bidMode = profile.bidMode || 'balanced';
+  bidWeights = profile.bidWeights || bidWeights;
+  bidProfile = profile.bidProfile || bidProfile;
+  syncSlidersToWeights();
+  syncBidProfileUI();
+  saveData();
+  if (bidTable) runBidBuilder(false);
+  showToast(`Loaded profile "${name}"`);
+}
+
+function deleteSelectedBidProfile() {
+  const select = document.getElementById('profile-select');
+  const name = select?.value;
+  if (!name) {
+    showToast('Select a profile to delete', 'error');
+    return;
+  }
+  delete savedBidProfiles[name];
+  syncBidProfileUI();
+  saveData();
+  showToast(`Deleted profile "${name}"`);
+}
+
+function setDestinationProfileHints() {
+  renderFavoriteDestinations();
+  renderDestinationSuggestions();
+}
+
 function clearQuickFilters() {
   const ids = [
     'filter-redeye',
@@ -2367,31 +2689,6 @@ function updateGDOSummary() {
 // =====================================================================
 // BID BUILDER
 // =====================================================================
-function applyPreset(mode) {
-  bidMode = mode;
-  
-  if (mode === 'lazy') {
-    bidWeights = { credit: 2, layover: 12, commutable: 10, redeye: 80 };
-  } else {
-    bidWeights = { credit: 8, layover: 0, commutable: 15, redeye: 60 };
-  }
-  
-  syncSlidersToWeights();
-  
-  document.querySelectorAll('.mode-toggle button').forEach(b => {
-    if (b.dataset.mode === mode) {
-      b.classList.add('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400');
-      b.classList.remove('text-slate-500', 'dark:text-slate-400');
-    } else {
-      b.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400');
-      b.classList.add('text-slate-500', 'dark:text-slate-400');
-    }
-  });
-  
-  saveData();
-  if (bidTable) runBidBuilder(false); 
-}
-
 function syncSlidersToWeights() {
   ['credit', 'layover', 'commutable', 'redeye'].forEach(t => {
     const el = document.getElementById(`weight-${t}`);
@@ -2412,13 +2709,9 @@ function applyWeights() {
   bidWeights.layover = parseInt(document.getElementById('weight-layover').value);
   bidWeights.commutable = parseInt(document.getElementById('weight-commutable').value);
   bidWeights.redeye = parseInt(document.getElementById('weight-redeye').value);
-  
-  document.querySelectorAll('.mode-toggle button').forEach(b => {
-    b.classList.remove('bg-brand-50', 'dark:bg-brand-500/10', 'text-brand-600', 'dark:text-brand-400');
-    b.classList.add('text-slate-500', 'dark:text-slate-400');
-  });
-  
+
   saveData();
+  syncBidProfileModeButtons();
   if (bidTable) runBidBuilder(false); 
 }
 
@@ -2429,6 +2722,17 @@ function scorePairing(p) {
   let score = 0;
 
   const w = bidWeights;
+  const profile = bidProfile || {};
+  const targetCredit = Number(profile.targetCredit || 75);
+  const targetDays = Number(profile.targetDays || 16);
+  const mode = profile.monthlyGoal || 'balanced';
+  const destinationMode = profile.destinationMode || 'any';
+  const favs = new Set((profile.favoriteDestinations || []).map(normalizeAirportCode).filter(Boolean));
+  const stations = extractPairingStations(p);
+  const matchesFav = [...stations].some(code => favs.has(normalizeAirportCode(code)));
+  const hasYowLayover = (p.layovers || []).some(l => normalizeAirportCode(l.location) === 'YOW');
+  const startMins = p.report_minutes || timeStrToMinutes(p.report_time || '');
+  const releaseMins = p.release_minutes || timeStrToMinutes(p.release_time || '');
 
   const efficiency = tafbH > 0 ? creditH / tafbH : 0;
   score += efficiency * (w.credit * 25); 
@@ -2442,13 +2746,52 @@ function scorePairing(p) {
 
   if (p.is_lazy_pairing && w.layover > 5) score += w.layover * 2.5;
 
+  if (destinationMode === 'home') {
+    score += hasYowLayover ? 60 : -12;
+  } else if (destinationMode === 'favorites') {
+    score += matchesFav ? 45 : -8;
+  } else if (matchesFav) {
+    score += 28;
+  }
+
+  if (hasYowLayover && destinationMode !== 'home') score += 30;
+  if (matchesFav && destinationMode !== 'favorites') score += 10;
+
+  if (!isNaN(startMins)) {
+    if (mode === 'home' || mode === 'balanced') {
+      if (startMins >= 10 * 60) score += 14;
+      if (startMins >= 12 * 60) score += 8;
+    } else if (mode === 'credit' && startMins >= 9 * 60) {
+      score += 8;
+    }
+  }
+
+  if (!isNaN(releaseMins)) {
+    if (mode === 'home' || mode === 'balanced') {
+      if (releaseMins <= 18 * 60) score += 16;
+      if (releaseMins <= 17 * 60) score += 10;
+    }
+  }
+
   score -= (p.total_legs || 0) * 0.5;
+  score -= Math.max(0, ((p.days_of_work || 0) / 2) - 1) * 1.5;
 
   if (preferDays > 0) {
     const d = p.days_of_work;
     if (d >= preferDays && d <= preferDays + 1) score += 60;
     else if (d === preferDays - 1) score += 20;
     else if (d <= 2) score -= 50;
+  }
+
+  if (mode === 'home') {
+    score += Math.max(0, 5 - (p.total_legs || 0)) * 3;
+    score += Math.max(0, 2 - (p.days_of_work || 0)) * 4;
+  } else if (mode === 'credit') {
+    score += Math.max(0, 24 - Math.abs(targetCredit - creditH) * 4);
+    score += Math.max(0, 18 - Math.abs(targetDays - (p.days_of_work || 0)) * 3);
+  } else {
+    score += Math.max(0, 18 - Math.abs(targetCredit - creditH) * 2);
+    score += Math.max(0, 10 - Math.abs(targetDays - (p.days_of_work || 0)) * 2);
   }
 
   score += Math.min((p.operating_dates||[]).length, 5) * 1.5;
@@ -2640,6 +2983,8 @@ function evaluatePairingGuardrails(p) {
 
 function runBidBuilder(autoFill = false) {
   const eligible = getEligiblePairings();
+  const targetLineCredit = Number(bidProfile?.targetCredit || 75);
+  const targetLineDays = Number(bidProfile?.targetDays || 16);
   const seen = new Map();
   for (const p of eligible) {
     const key = p.pairing_number;
@@ -2764,13 +3109,13 @@ function runBidBuilder(autoFill = false) {
       }
     });
 
-    // Fill remaining slots with top non-overlapping pairings representing a legal line (~75hrs, <=16 days)
+    // Fill remaining slots with top non-overlapping pairings representing a legal line near the target
     for (const p of scored) {
       if (bidList.length >= MAX_BID_SLOTS) break;
       
       const pCredit = p.correctedcredit || 0;
-      if (totalCredit + pCredit > 75) continue; // Do not exceed 75 hours
-      if (totalDays + p.days_of_work > 16) continue;
+      if (totalCredit + pCredit > targetLineCredit) continue;
+      if (totalDays + p.days_of_work > targetLineDays) continue;
 
       let overlaps = false;
       if (p.all_dates) {
@@ -2861,10 +3206,10 @@ function replaceBid(index) {
       // REQUIREMENT: Must have NO warnings to be a valid replacement
       if (p.warnings && p.warnings.length > 0) continue;
       
-      // Must fit the 75h / 16d constraints when added to the temp line
+      // Must fit the current target credit / day constraints when added to the temp line
       const pCredit = p.correctedcredit || 0;
-      if (tempCredit + pCredit > 75) continue;
-      if (tempDays + (p.days_of_work || 0) > 16) continue;
+      if (tempCredit + pCredit > Number(bidProfile?.targetCredit || 75)) continue;
+      if (tempDays + (p.days_of_work || 0) > Number(bidProfile?.targetDays || 16)) continue;
 
       // Must not overlap with any existing dates in the temp line
       let overlaps = false;
